@@ -32,31 +32,61 @@ interface MapProps {
   selectedFuelType?: FuelType;
   searchCenter?: [number, number] | null;
   onStationSelect?: (id: string | null) => void;
+  fitAllTripsTrigger?: number;
 }
 
 // Custom component to dynamically fit bounds of the map based on paths loaded
-function FitBounds({ trips, activeTripId }: { trips: Trip[]; activeTripId?: string | null }) {
+function FitBounds({
+  trips,
+  activeTripId,
+  fitAllTripsTrigger,
+}: {
+  trips: Trip[];
+  activeTripId?: string | null;
+  fitAllTripsTrigger?: number;
+}) {
   const map = useMap();
+  const hasFitOnMount = React.useRef(false);
+  const prevActiveTripId = React.useRef<string | null | undefined>(undefined);
+  const prevTrigger = React.useRef(fitAllTripsTrigger);
 
   useEffect(() => {
     if (trips.length === 0) return;
 
-    let pathsToFit: [number, number][][] = [];
-
-    if (activeTripId) {
-      const activeTrip = trips.find(t => t.id === activeTripId);
-      if (activeTrip && activeTrip.path.length > 0) {
-        pathsToFit = [activeTrip.path];
+    // 1. Fit bounds to all trips if manual trigger changed
+    if (fitAllTripsTrigger !== undefined && fitAllTripsTrigger !== prevTrigger.current) {
+      prevTrigger.current = fitAllTripsTrigger;
+      const allPaths = trips.map((t) => t.path).filter((p) => p.length > 0);
+      if (allPaths.length > 0) {
+        const bounds = L.latLngBounds(allPaths.flat());
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
       }
-    } else {
-      pathsToFit = trips.map(t => t.path).filter(p => p.length > 0);
+      return;
     }
 
-    if (pathsToFit.length > 0) {
-      const bounds = L.latLngBounds(pathsToFit.flat());
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
+    // 2. Zoom to active trip when activeTripId changes
+    if (activeTripId !== prevActiveTripId.current) {
+      prevActiveTripId.current = activeTripId;
+      if (activeTripId) {
+        const activeTrip = trips.find((t) => t.id === activeTripId);
+        if (activeTrip && activeTrip.path.length > 0) {
+          const bounds = L.latLngBounds(activeTrip.path);
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
+        }
+      }
+      return;
     }
-  }, [trips, activeTripId, map]);
+
+    // 3. Only fit bounds to all trips ONCE on initial mount
+    if (!hasFitOnMount.current) {
+      const allPaths = trips.map((t) => t.path).filter((p) => p.length > 0);
+      if (allPaths.length > 0) {
+        const bounds = L.latLngBounds(allPaths.flat());
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true });
+        hasFitOnMount.current = true;
+      }
+    }
+  }, [trips, activeTripId, fitAllTripsTrigger, map]);
 
   return null;
 }
@@ -154,6 +184,7 @@ export default function Map({
   selectedFuelType = 'sp95',
   searchCenter = null,
   onStationSelect,
+  fitAllTripsTrigger,
 }: MapProps) {
   // Center of France by default
   const defaultCenter: [number, number] = [46.2276, 2.2137];
@@ -365,7 +396,11 @@ export default function Map({
           );
         })}
 
-        <FitBounds trips={trips} activeTripId={activeTripId} />
+        <FitBounds 
+          trips={trips} 
+          activeTripId={activeTripId} 
+          fitAllTripsTrigger={fitAllTripsTrigger} 
+        />
         
         <MapController
           searchCenter={searchCenter}

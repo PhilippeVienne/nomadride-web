@@ -97,6 +97,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const [isSearchingStations, setIsSearchingStations] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [fitAllTripsTrigger, setFitAllTripsTrigger] = useState(0);
 
   // Filter out doubtful/fallback trips (path length <= 2)
   const trips = initialTrips.filter(t => t.path && t.path.length > 2);
@@ -736,11 +737,25 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
         <section className="map-view-panel">
           <div className="map-view-header">
             <h2 className="map-title">Carte interactive des rides</h2>
-            {activeTripId && (
-              <span style={{ fontSize: '13px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent-orange)', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
-                Tracé actif zoomé
-              </span>
-            )}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {activeTripId && (
+                <span style={{ fontSize: '13px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent-orange)', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
+                  Tracé actif zoomé
+                </span>
+              )}
+              {trips.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFitAllTripsTrigger((prev) => prev + 1)}
+                  className="btn-creds-edit"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', fontSize: '12px' }}
+                  title="Ajuster la carte pour afficher tous vos trajets"
+                >
+                  <Compass size={14} />
+                  <span>Ajuster la vue</span>
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="map-container-wrapper">
@@ -752,6 +767,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               selectedFuelType={selectedFuel}
               searchCenter={searchCenter}
               onStationSelect={setActiveStationId}
+              fitAllTripsTrigger={fitAllTripsTrigger}
             />
           </div>
         </section>
