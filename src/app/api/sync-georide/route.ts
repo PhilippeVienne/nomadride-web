@@ -159,26 +159,44 @@ export async function POST(request: NextRequest) {
           // Generate coordinates path
           const path = generateMockPath(tripRoute.start, tripRoute.end);
 
-          // Upsert trip in Trips collection
-          await payloadInstance.create({
+          // Check if mock trip already exists
+          const existingMockTrip = await payloadInstance.find({
             collection: 'trips',
-            data: {
-              user: user.id,
-              geoRideTripId: tripId,
-              title: `${tripRoute.title} (${tripDate.toLocaleDateString('fr-FR')})`,
-              startedAt: tripStart.toISOString(),
-              endedAt: tripEnd.toISOString(),
-              distance,
-              duration,
-              path,
+            where: {
+              geoRideTripId: {
+                equals: tripId,
+              },
             },
-          }).catch(err => {
-            // If already exists, payload will trigger error on unique field geoRideTripId
-            // In a real database upsert we would handle it. Let's log it.
-            console.log(`[GeoRide Sync] Mock Trip ${tripId} already exists or failed to create`);
+            limit: 1,
           });
 
-          newTripsCount++;
+          if (existingMockTrip.docs.length > 0) {
+            await payloadInstance.update({
+              collection: 'trips',
+              id: existingMockTrip.docs[0].id,
+              data: {
+                title: `${tripRoute.title} (${tripDate.toLocaleDateString('fr-FR')})`,
+                distance,
+                duration,
+                path,
+              },
+            });
+          } else {
+            await payloadInstance.create({
+              collection: 'trips',
+              data: {
+                user: user.id,
+                geoRideTripId: tripId,
+                title: `${tripRoute.title} (${tripDate.toLocaleDateString('fr-FR')})`,
+                startedAt: tripStart.toISOString(),
+                endedAt: tripEnd.toISOString(),
+                distance,
+                duration,
+                path,
+              },
+            });
+            newTripsCount++;
+          }
         }
       }
     } else {
