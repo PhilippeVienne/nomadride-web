@@ -96,6 +96,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const [activeStationId, setActiveStationId] = useState<string | null>(null);
   const [isSearchingStations, setIsSearchingStations] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   // Filter out doubtful/fallback trips (path length <= 2)
   const trips = initialTrips.filter(t => t.path && t.path.length > 2);
@@ -188,6 +189,29 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
       setSearchQuery(`Trajet : ${activeTrip.title || 'Ride Actif'}`);
       setShowAutocomplete(false);
     }
+  };
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas supportée par votre navigateur.");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setSearchCenter([latitude, longitude]);
+        setSearchQuery("Ma Position");
+        setShowAutocomplete(false);
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        alert("Impossible d'obtenir votre position. Assurez-vous d'avoir autorisé l'accès à la localisation dans votre navigateur.");
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   // Trigger sync via API Route
@@ -476,9 +500,33 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
                       placeholder="Rechercher une ville, adresse..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ width: '100%', paddingLeft: '36px' }}
+                      style={{ width: '100%', paddingLeft: '36px', paddingRight: '36px' }}
                     />
                     <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--color-text-muted)' }} />
+                    <button
+                      type="button"
+                      onClick={handleGeolocate}
+                      disabled={isLocating}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        background: 'none',
+                        border: 'none',
+                        color: isLocating ? 'var(--accent-orange)' : 'var(--color-text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                      title="Utiliser ma position actuelle"
+                    >
+                      <Navigation 
+                        size={16} 
+                        className={isLocating ? 'spinner' : ''} 
+                        style={{ transform: isLocating ? 'none' : 'rotate(45deg)', transition: 'color 0.2s' }} 
+                      />
+                    </button>
                   </div>
 
                   {showAutocomplete && (
