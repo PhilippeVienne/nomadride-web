@@ -334,12 +334,12 @@ export default function Map({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '4px', marginTop: '2px' }}>
                       <span>Coût du détour :</span>
-                      <strong>{station.currency === 'CHF' ? `${(station.detourCostEur * 1.05).toFixed(2)} CHF` : `${station.detourCostEur.toFixed(2)} €`}</strong>
+                      <strong>{hasPrice && station.detourCostEur !== null && station.detourCostEur !== undefined ? (station.currency === 'CHF' ? `${(station.detourCostEur * 1.05).toFixed(2)} CHF` : `${station.detourCostEur.toFixed(2)} €`) : '—'}</strong>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Coût plein carburant :</span>
-                      <span>{station.currency === 'CHF' ? `${(station.totalFuelCostEur * 1.05).toFixed(2)} CHF` : `${station.totalFuelCostEur.toFixed(2)} €`}</span>
+                      <span>{hasPrice && station.totalFuelCostEur !== null && station.totalFuelCostEur !== undefined ? (station.currency === 'CHF' ? `${(station.totalFuelCostEur * 1.05).toFixed(2)} CHF` : `${station.totalFuelCostEur.toFixed(2)} €`) : '—'}</span>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '4px', fontWeight: 'bold' }}>

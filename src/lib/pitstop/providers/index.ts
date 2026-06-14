@@ -45,10 +45,13 @@ export function calculateEffectiveCost(
   const FX_CHF_TO_EUR = 0.95; // 1 CHF = 0.95 EUR (2026)
   const FX_EUR_TO_CHF = 1.05; // 1 EUR = 1.05 CHF
 
-  const price = station.prices[selectedFuelType] || Infinity;
+  const price = station.prices[selectedFuelType];
+  const hasPrice = price !== undefined && price !== null;
 
-  // 1. Normalization in EUR
-  const priceInEur = station.currency === 'CHF' ? price * FX_CHF_TO_EUR : price;
+  // 1. Normalization in EUR (default to 0 if price is missing to avoid JSON null serialization issues)
+  const priceInEur = hasPrice
+    ? (station.currency === 'CHF' ? price * FX_CHF_TO_EUR : price)
+    : 0;
 
   // 2. Freshness penalty (+0.002 EUR/L per hour beyond 12 hours, capped at 0.15 EUR)
   const ageInHours = (Date.now() - new Date(station.updatedAt).getTime()) / 3600000;
@@ -56,20 +59,20 @@ export function calculateEffectiveCost(
     ? Math.min(0.15, (ageInHours - 12) * 0.002) 
     : 0;
 
-  const effectivePricePerLiterEur = priceInEur + freshnessPenalty;
+  const effectivePricePerLiterEur = priceInEur + (hasPrice ? freshnessPenalty : 0);
 
   // 3. Detour cost calculation (two-way trip, distanceKm * 2)
   const consumptionPerKm = settings.consumption / 100;
   const detourFuelUsed = settings.excludeDistance ? 0 : distanceKm * 2 * consumptionPerKm;
 
-  const detourCostEur = detourFuelUsed * effectivePricePerLiterEur;
-  const totalFuelCostEur = settings.fillSize * effectivePricePerLiterEur;
+  const detourCostEur = hasPrice ? detourFuelUsed * effectivePricePerLiterEur : 0;
+  const totalFuelCostEur = hasPrice ? settings.fillSize * effectivePricePerLiterEur : 0;
   const totalCostEur = totalFuelCostEur + detourCostEur;
 
   // 4. Convert back to original currency for display
-  const totalCostOriginalCurrency = station.currency === 'CHF' 
-    ? totalCostEur * FX_EUR_TO_CHF 
-    : totalCostEur;
+  const totalCostOriginalCurrency = hasPrice
+    ? (station.currency === 'CHF' ? totalCostEur * FX_EUR_TO_CHF : totalCostEur)
+    : 0;
 
   return {
     ...station,
