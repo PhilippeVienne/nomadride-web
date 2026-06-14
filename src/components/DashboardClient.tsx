@@ -660,7 +660,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
                               </span>
                             </div>
                             <div className="station-price-total">
-                              Total : <strong>{station.totalCostOriginalCurrency.toFixed(2)} {station.currency}</strong>
+                              Total : <strong>{price !== undefined && station.totalCostOriginalCurrency !== null ? `${station.totalCostOriginalCurrency.toFixed(2)} ${station.currency}` : '—'}</strong>
                             </div>
                           </div>
 
