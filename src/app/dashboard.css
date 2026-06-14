@@ -311,6 +311,177 @@
   gap: 16px;
 }
 
+/* Desktop nav: hide on mobile */
+.navbar-actions--desktop {
+  display: flex;
+}
+
+/* Burger button: hidden on desktop */
+.navbar-burger {
+  display: none;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 6px 8px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.navbar-burger:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+}
+
+/* Mobile dropdown menu */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.mobile-menu-panel {
+  background: #0f172a;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  margin: 72px 12px 0 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 220px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: slideInMenu 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInMenu {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mobile-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-menu-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+.mobile-menu-divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.mobile-menu-btn {
+  width: 100%;
+  text-align: left;
+  display: block;
+}
+
+/* Mobile bottom navigation bar */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(11, 15, 25, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+  padding: 8px 0 env(safe-area-inset-bottom, 8px);
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 4px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--accent-orange);
+}
+
+.mobile-bottom-nav-item:hover {
+  color: var(--color-text-primary);
+}
+
+.mobile-nav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Pit-Stop settings panel toggle header */
+.pitstop-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pitstop-settings-header:hover {
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.pitstop-settings-toggle {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+/* Pitstop settings: collapsed by default on mobile, always visible on desktop */
+.pitstop-settings-grid {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.pitstop-settings-grid.pitstop-settings-open {
+  display: flex;
+}
+
 .auth-status-container {
   display: flex;
   align-items: center;
@@ -1134,6 +1305,23 @@
   .stat-value {
     font-size: 15px;
   }
+  /* On tablet+, settings always visible, hide the collapsible toggle */
+  .pitstop-settings-header {
+    display: none;
+  }
+  .pitstop-settings-grid {
+    display: flex;
+  }
+}
+
+/* On large screens, settings always visible */
+@media (min-width: 1025px) {
+  .pitstop-settings-header {
+    display: none;
+  }
+  .pitstop-settings-grid {
+    display: flex;
+  }
 }
 
 /* Mobile Screens Stacking (Portrait) */
@@ -1143,6 +1331,8 @@
     grid-template-rows: auto 450px;
     height: auto;
     overflow: visible;
+    /* Extra bottom padding to avoid content under bottom nav */
+    padding-bottom: 70px;
   }
   .sidebar {
     padding: 16px;
@@ -1163,21 +1353,33 @@
   .trips-list-container {
     max-height: 250px;
   }
+  /* Show burger, hide desktop nav */
+  .navbar-actions--desktop {
+    display: none;
+  }
+  .navbar-burger {
+    display: flex;
+  }
+  /* Show bottom nav */
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  /* Pitstop settings always visible on desktop, collapsed by default on mobile — keep collapsed */
+  .pitstop-settings-grid {
+    display: none;
+  }
+  .pitstop-settings-grid.pitstop-settings-open {
+    display: flex;
+  }
 }
 
 /* Narrow mobile screens */
 @media (max-width: 480px) {
   .navbar {
-    height: auto;
-    padding: 12px 16px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .auth-status-container {
-    font-size: 11px;
-    flex-wrap: wrap;
-    gap: 8px;
+    height: 56px;
+    padding: 0 16px;
+    flex-direction: row;
+    align-items: center;
   }
   .stats-grid {
     grid-template-columns: 1fr;
