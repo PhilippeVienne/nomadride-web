@@ -1,65 +1,73 @@
-import Image from "next/image";
+import { getPayload } from 'payload';
+import config from '../../payload.config';
+import DashboardClient from '@/components/DashboardClient';
 
-export default function Home() {
+export const revalidate = 0; // Disable server caching to ensure page updates when data is synced
+
+export default async function Page() {
+  const payload = await getPayload({ config });
+
+  // Fallback default user for local development and testing
+  const auth0Id = 'auth0|default_local_user_95';
+
+  // 1. Fetch user record from Payload database
+  const userResult = await payload.find({
+    collection: 'users',
+    where: {
+      auth0Id: {
+        equals: auth0Id,
+      },
+    },
+    limit: 1,
+  });
+
+  let user = userResult.docs[0];
+  if (!user) {
+    // Automatically provision the user record on first visit for plug-and-play testing
+    user = await payload.create({
+      collection: 'users',
+      data: {
+        auth0Id,
+        geoRideEmail: 'motard@example.com',
+        geoRidePassword: 'motard_secret_password_95', // Encrypted via hook
+        trackingStartDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+  }
+
+  // 2. Fetch trips cached for this user
+  const tripsResult = await payload.find({
+    collection: 'trips',
+    where: {
+      user: {
+        equals: user.id,
+      },
+    },
+    limit: 1000,
+    sort: '-startedAt', // Display latest rides first in list
+  });
+
+  // Map results to clean types suitable for client-side hydration, casting IDs explicitly to string
+  const trips = tripsResult.docs.map(doc => ({
+    id: String(doc.id),
+    title: doc.title || undefined,
+    startedAt: doc.startedAt,
+    endedAt: doc.endedAt,
+    distance: doc.distance || undefined,
+    duration: doc.duration || undefined,
+    path: (doc.path as [number, number][]) || [],
+  }));
+
+  const serializableUser = {
+    id: String(user.id),
+    geoRideEmail: user.geoRideEmail || undefined,
+    lastSyncDate: user.lastSyncDate || undefined,
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <DashboardClient 
+      initialTrips={trips} 
+      user={serializableUser} 
+    />
   );
 }
