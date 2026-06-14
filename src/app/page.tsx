@@ -98,6 +98,14 @@ export default async function Page() {
     lastSyncDate: user.lastSyncDate || undefined,
     auth0Id: user.auth0Id || auth0Id,
     isAuthenticated: auth0Id !== 'auth0|default_local_user_95',
+    selectedFuel: user.selectedFuel || 'sp95',
+    searchRadius: user.searchRadius || 20,
+    fillSize: user.fillSize || 15,
+    consumption: user.consumption || 5.0,
+    excludeDistance: !!user.excludeDistance,
+    lastSearchQuery: user.lastSearchQuery || '',
+    lastSearchLat: typeof user.lastSearchLat === 'number' ? user.lastSearchLat : null,
+    lastSearchLng: typeof user.lastSearchLng === 'number' ? user.lastSearchLng : null,
   };
 
   return (

@@ -58,6 +58,14 @@ interface User {
   lastSyncDate?: string;
   auth0Id?: string;
   isAuthenticated?: boolean;
+  selectedFuel?: FuelType;
+  searchRadius?: number;
+  fillSize?: number;
+  consumption?: number;
+  excludeDistance?: boolean;
+  lastSearchQuery?: string;
+  lastSearchLat?: number | null;
+  lastSearchLng?: number | null;
 }
 
 interface DashboardClientProps {
@@ -78,18 +86,20 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   // Tab Navigation State
   const [activeTab, setActiveTab] = useState<'trips' | 'pitstop'>('trips');
 
-  // Pit-Stop Module States
-  const [searchQuery, setSearchQuery] = useState('');
+  // Pit-Stop Module States (Initialized from database search preferences)
+  const [searchQuery, setSearchQuery] = useState(user.lastSearchQuery || '');
   const [autocompleteResults, setAutocompleteResults] = useState<{ name: string; lat: number; lon: number }[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [searchCenter, setSearchCenter] = useState<[number, number] | null>(null);
+  const [searchCenter, setSearchCenter] = useState<[number, number] | null>(
+    user.lastSearchLat && user.lastSearchLng ? [user.lastSearchLat, user.lastSearchLng] : null
+  );
   
-  // Trip Settings
-  const [selectedFuel, setSelectedFuel] = useState<FuelType>('sp95');
-  const [radius, setRadius] = useState<number>(20);
-  const [fillSize, setFillSize] = useState<number>(15);
-  const [consumption, setConsumption] = useState<number>(5.0);
-  const [excludeDistance, setExcludeDistance] = useState<boolean>(false);
+  // Trip Settings (Initialized from database search preferences)
+  const [selectedFuel, setSelectedFuel] = useState<FuelType>(user.selectedFuel || 'sp95');
+  const [radius, setRadius] = useState<number>(user.searchRadius || 20);
+  const [fillSize, setFillSize] = useState<number>(user.fillSize || 15);
+  const [consumption, setConsumption] = useState<number>(user.consumption || 5.0);
+  const [excludeDistance, setExcludeDistance] = useState<boolean>(!!user.excludeDistance);
 
   // Station Fetch Results
   const [stations, setStations] = useState<PitStopResponse[]>([]);
@@ -180,6 +190,37 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
       fetchStations(searchCenter[0], searchCenter[1]);
     }
   }, [searchCenter, selectedFuel, radius, fillSize, consumption, excludeDistance]);
+
+  // Debounced effect to save user search preferences to database
+  useEffect(() => {
+    const delayTimer = setTimeout(async () => {
+      try {
+        const body = {
+          selectedFuel,
+          searchRadius: radius,
+          fillSize,
+          consumption,
+          excludeDistance,
+          lastSearchQuery: searchQuery,
+          lastSearchLat: searchCenter ? searchCenter[0] : null,
+          lastSearchLng: searchCenter ? searchCenter[1] : null,
+        };
+
+        const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
+        await fetch(`/api/user/preferences${userIdParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        console.error('Failed to sync search preferences:', err);
+      }
+    }, 1000);
+
+    return () => clearTimeout(delayTimer);
+  }, [selectedFuel, radius, fillSize, consumption, excludeDistance, searchQuery, searchCenter, user.auth0Id]);
 
   const handleSelectAutocomplete = (item: { name: string; lat: number; lon: number }) => {
     setSearchQuery(item.name);

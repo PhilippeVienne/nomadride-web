@@ -49,6 +49,49 @@ export const Users: CollectionConfig = {
       type: 'date',
     },
     {
+      name: 'selectedFuel',
+      type: 'select',
+      options: [
+        { label: 'SP95', value: 'sp95' },
+        { label: 'SP98', value: 'sp98' },
+        { label: 'E10', value: 'e10' },
+        { label: 'Gazole', value: 'gazole' },
+      ],
+      defaultValue: 'sp95',
+    },
+    {
+      name: 'searchRadius',
+      type: 'number',
+      defaultValue: 20,
+    },
+    {
+      name: 'fillSize',
+      type: 'number',
+      defaultValue: 15,
+    },
+    {
+      name: 'consumption',
+      type: 'number',
+      defaultValue: 5.0,
+    },
+    {
+      name: 'excludeDistance',
+      type: 'checkbox',
+      defaultValue: false,
+    },
+    {
+      name: 'lastSearchQuery',
+      type: 'text',
+    },
+    {
+      name: 'lastSearchLat',
+      type: 'number',
+    },
+    {
+      name: 'lastSearchLng',
+      type: 'number',
+    },
+    {
       name: 'selectedTrackers',
       type: 'array',
       fields: [
