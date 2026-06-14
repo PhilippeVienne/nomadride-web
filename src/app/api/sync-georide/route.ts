@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
       user = await payloadInstance.create({
         collection: 'users',
         data: {
+          email: 'motard@example.com',
+          password: 'admin_password_95', // Admin login password
           auth0Id,
           geoRideEmail: 'motard@example.com',
           geoRidePassword: 'motard_secret_password_95', // Encrypted automatically via hook

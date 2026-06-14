@@ -27,6 +27,8 @@ export default async function Page() {
     user = await payload.create({
       collection: 'users',
       data: {
+        email: 'motard@example.com',
+        password: 'admin_password_95', // Admin login password
         auth0Id,
         geoRideEmail: 'motard@example.com',
         geoRidePassword: 'motard_secret_password_95', // Encrypted via hook
