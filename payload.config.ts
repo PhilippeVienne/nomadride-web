@@ -22,6 +22,13 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
     },
+    tablesFilter: [
+      '!spatial_ref_sys',
+      '!geography_columns',
+      '!geometry_columns',
+      '!raster_columns',
+      '!raster_overviews',
+    ],
   }),
   sharp,
   typescript: {
