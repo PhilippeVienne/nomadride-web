@@ -1081,3 +1081,8 @@
   color: var(--color-text-secondary);
 }
 
+.custom-fuel-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+

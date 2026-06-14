@@ -115,7 +115,7 @@ const createFuelIcon = (priceRank: 'cheap' | 'normal' | 'none', label: string, i
   const shadow = isActive ? 'box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);' : 'box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);';
 
   return L.divIcon({
-    className: 'custom-fuel-marker',
+    className: 'custom-fuel-marker-container',
     html: `
       <div style="
         background: ${bgColor};

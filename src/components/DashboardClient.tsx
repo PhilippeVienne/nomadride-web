@@ -117,7 +117,12 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
 
   // Fetch autocompletion queries from Nominatim endpoint
   useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 3 || searchQuery.startsWith('Trajet :')) {
+    if (
+      !searchQuery ||
+      searchQuery.trim().length < 3 ||
+      searchQuery.startsWith('Trajet :') ||
+      searchQuery === 'Ma Position'
+    ) {
       setAutocompleteResults([]);
       setShowAutocomplete(false);
       return;
