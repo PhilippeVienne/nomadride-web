@@ -1,4 +1,5 @@
 import { BaseStation } from '../types';
+import { getCachedFuelStations, saveFuelStationsToCache } from '../dbCache';
 
 interface CacheEntry {
   data: BaseStation[];
@@ -33,6 +34,21 @@ export async function getGermanStations(
   const cached = germanyCache.get(cellKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_15M) {
     return cached.data;
+  }
+
+  // 2. Check Database Cache
+  try {
+    const dbCached = await getCachedFuelStations('DE', lat, lon, radiusKm, CACHE_TTL_15M);
+    if (dbCached !== null) {
+      // Warm up memory cache
+      germanyCache.set(cellKey, {
+        data: dbCached,
+        timestamp: Date.now(),
+      });
+      return dbCached;
+    }
+  } catch (error) {
+    console.error('Error reading German stations database cache:', error);
   }
 
   // Tankerkoenig limits radius to maximum 25 km
@@ -98,6 +114,12 @@ export async function getGermanStations(
       data: parsedStations,
       timestamp: Date.now(),
     });
+
+    try {
+      await saveFuelStationsToCache(parsedStations);
+    } catch (error) {
+      console.error('Error saving German stations to database cache:', error);
+    }
 
     return parsedStations;
   } catch (error) {

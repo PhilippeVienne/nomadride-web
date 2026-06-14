@@ -100,7 +100,7 @@ export async function getStationsAround(
   if (overlaps(lat, lon, radiusKm, FR_BBOX)) promises.push(getFrenchStations(lat, lon, radiusKm));
   if (overlaps(lat, lon, radiusKm, ES_BBOX)) promises.push(getSpanishStations(lat, lon, radiusKm));
   if (overlaps(lat, lon, radiusKm, DE_BBOX)) promises.push(getGermanStations(lat, lon, radiusKm));
-  if (overlaps(lat, lon, radiusKm, AT_BBOX)) promises.push(getAustrianStations(lat, lon, selectedFuel));
+  if (overlaps(lat, lon, radiusKm, AT_BBOX)) promises.push(getAustrianStations(lat, lon, selectedFuel, radiusKm));
   if (overlaps(lat, lon, radiusKm, CH_BBOX)) promises.push(getSwissStations(lat, lon, radiusKm));
 
   // Execute in parallel

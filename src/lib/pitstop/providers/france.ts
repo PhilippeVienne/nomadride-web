@@ -1,5 +1,6 @@
 import { BaseStation } from '../types';
 import { haversineDistance } from '../utils';
+import { getCachedFuelStations, saveFuelStationsToCache } from '../dbCache';
 
 interface CacheEntry {
   data: BaseStation[];
@@ -100,7 +101,17 @@ export async function getFrenchStations(
   lon: number,
   radiusKm: number
 ): Promise<BaseStation[]> {
-  // 1. Manage Global In-Memory Cache
+  // 1. Check Database Cache
+  try {
+    const cached = await getCachedFuelStations('FR', lat, lon, radiusKm, CACHE_TTL_1H);
+    if (cached !== null) {
+      return cached;
+    }
+  } catch (error) {
+    console.error('Error reading French stations database cache:', error);
+  }
+
+  // 2. Manage Global In-Memory Cache on Miss
   if (!globalFranceCache || Date.now() - globalFranceCache.timestamp > CACHE_TTL_1H) {
     try {
       const data = await fetchAllFrenchStations();
@@ -116,8 +127,21 @@ export async function getFrenchStations(
 
   const allStations = globalFranceCache.data;
 
-  // 2. Local geographic filtering
-  return allStations.filter((station) => {
+  // 3. Filter stations to the query area with a 10km buffer and save to cache
+  const bufferKm = radiusKm + 10;
+  const nearbyStations = allStations.filter((station) => {
+    const dist = haversineDistance(lat, lon, station.latitude, station.longitude);
+    return dist <= bufferKm;
+  });
+
+  try {
+    await saveFuelStationsToCache(nearbyStations);
+  } catch (error) {
+    console.error('Error saving French stations to database cache:', error);
+  }
+
+  // 4. Return exact filtered stations
+  return nearbyStations.filter((station) => {
     const dist = haversineDistance(lat, lon, station.latitude, station.longitude);
     return dist <= radiusKm;
   });

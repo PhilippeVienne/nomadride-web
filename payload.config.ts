@@ -7,6 +7,9 @@ import sharp from 'sharp';
 
 import { Users } from './src/collections/Users';
 import { Trips } from './src/collections/Trips';
+import { FuelStations } from './src/collections/FuelStations';
+import { OsmStations } from './src/collections/OsmStations';
+import { OsmQueries } from './src/collections/OsmQueries';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -15,7 +18,7 @@ export default buildConfig({
   admin: {
     user: 'users',
   },
-  collections: [Users, Trips],
+  collections: [Users, Trips, FuelStations, OsmStations, OsmQueries],
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95',
   db: postgresAdapter({

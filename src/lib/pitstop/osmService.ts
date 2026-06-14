@@ -1,5 +1,6 @@
 import { BaseStation } from './types';
 import { haversineDistance } from './utils';
+import { getCachedOsmStations, saveOsmQueryToCache } from './dbCache';
 
 interface CacheEntry<T> {
   data: T;
@@ -110,24 +111,36 @@ export async function enrichBrands(
     return stations;
   }
 
-  // 2. Perform Batch Fetch from Overpass for amenity=fuel in the search radius
-  // Convert km radius to meters
-  const radiusMeters = Math.round(radiusKm * 1000);
-  const overpassQuery = `[out:json][timeout:5];
+  // 2. Perform Batch Fetch from Overpass/Cache for amenity=fuel in the search radius
+  let osmElements: OsmElement[] = [];
+  const CACHE_TTL_90D = 90 * 24 * 60 * 60 * 1000;
+
+  try {
+    const cachedElements = await getCachedOsmStations(centerLat, centerLng, radiusKm, CACHE_TTL_90D);
+    if (cachedElements !== null) {
+      osmElements = cachedElements as OsmElement[];
+    } else {
+      // Convert km radius to meters
+      const radiusMeters = Math.round(radiusKm * 1000);
+      const overpassQuery = `[out:json][timeout:5];
 (
   node["amenity"="fuel"](around:${radiusMeters},${centerLat},${centerLng});
   way["amenity"="fuel"](around:${radiusMeters},${centerLat},${centerLng});
 );
 out center tags;`;
-
-  let osmElements: OsmElement[] = [];
-  try {
-    const response = await queryOverpass(overpassQuery);
-    if (response && response.elements) {
-      osmElements = response.elements as OsmElement[];
+      const response = await queryOverpass(overpassQuery);
+      if (response && response.elements) {
+        osmElements = response.elements as OsmElement[];
+        // Save to database cache
+        try {
+          await saveOsmQueryToCache(centerLat, centerLng, radiusKm, osmElements);
+        } catch (dbError) {
+          console.error('Failed to save OSM query to database cache:', dbError);
+        }
+      }
     }
   } catch (error) {
-    console.error('Failed to fetch brand enrichment data from Overpass:', error);
+    console.error('Failed to fetch brand enrichment data from Overpass or cache:', error);
     // If OSM query fails, return stations with whatever brands we resolved so far
     return stations;
   }
