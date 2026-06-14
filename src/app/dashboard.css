@@ -804,3 +804,280 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ==========================================================================
+   Pit-Stop Module Styling
+   ========================================================================== */
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.sidebar-tab {
+  flex: 1;
+  text-align: center;
+  padding: 12px 0;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.sidebar-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.sidebar-tab.active {
+  color: var(--accent-orange);
+  border-bottom-color: var(--accent-orange);
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+}
+
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  margin-top: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+}
+
+.autocomplete-item {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.autocomplete-item:hover {
+  background: var(--color-bg-card-hover);
+  color: var(--color-text-primary);
+}
+
+.pitstop-settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.fuel-selector-pills {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.fuel-pill {
+  flex: 1;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.fuel-pill:hover {
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.fuel-pill.active {
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--accent-orange);
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.1);
+}
+
+.station-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 480px;
+  padding-right: 4px;
+}
+
+.station-item-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.station-item-card:hover {
+  background: var(--color-bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(2px);
+}
+
+.station-item-card.active {
+  border-color: var(--accent-orange);
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.station-item-card.cheap-highlight {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.station-item-card.cheap-highlight:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.station-item-card.cheap-highlight.active {
+  border-color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.09);
+  box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.05);
+}
+
+.station-badge-cheapest {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-green);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  align-self: flex-start;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.station-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.station-item-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.station-item-meta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.station-price-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.station-price-liter {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent-orange);
+}
+
+.cheap-highlight .station-price-liter {
+  color: var(--accent-green);
+}
+
+.station-price-total {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.btn-shortcut-search {
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.btn-shortcut-search:hover {
+  background: var(--accent-cyan);
+  color: white;
+}
+
+.range-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.range-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.range-slider-input {
+  width: 100%;
+  accent-color: var(--accent-orange);
+  cursor: pointer;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-group input {
+  accent-color: var(--accent-orange);
+  cursor: pointer;
+}
+
+.checkbox-group span {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
