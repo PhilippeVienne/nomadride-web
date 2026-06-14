@@ -61,7 +61,7 @@
   padding: 0 24px;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1001;
 }
 
 .navbar-brand {
@@ -339,7 +339,7 @@
 .mobile-drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 199;
+  z-index: 999;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
 }
@@ -384,7 +384,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 1002;
   background: rgba(11, 15, 25, 0.95);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--color-border);
@@ -1327,7 +1327,7 @@
     left: 0;
     bottom: 0;
     width: min(85vw, 360px);
-    z-index: 200;
+    z-index: 1000;
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-right: 1px solid var(--color-border);
