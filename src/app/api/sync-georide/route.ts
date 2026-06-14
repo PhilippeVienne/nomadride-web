@@ -90,6 +90,9 @@ export async function POST(request: NextRequest) {
     });
 
     let user = userResult.docs[0];
+    const envEmail = process.env.GEORIDE_EMAIL;
+    const envPassword = process.env.GEORIDE_PASSWORD;
+
     if (!user) {
       // Create user record with mock defaults
       user = await payloadInstance.create({
@@ -98,9 +101,22 @@ export async function POST(request: NextRequest) {
           email: 'motard@example.com',
           password: 'admin_password_95', // Admin login password
           auth0Id,
-          geoRideEmail: 'motard@example.com',
-          geoRidePassword: 'motard_secret_password_95', // Encrypted automatically via hook
-          trackingStartDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+          geoRideEmail: envEmail || 'motard@example.com',
+          geoRidePassword: envPassword || 'motard_secret_password_95', // Encrypted automatically via hook
+          trackingStartDate: process.env.GEORIDE_START_DATE
+            ? new Date(process.env.GEORIDE_START_DATE).toISOString()
+            : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+        },
+      });
+    } else if (envEmail && envPassword && user.geoRideEmail !== envEmail) {
+      // Dynamically update credentials if modified in env files
+      user = await payloadInstance.update({
+        collection: 'users',
+        id: user.id,
+        data: {
+          geoRideEmail: envEmail,
+          geoRidePassword: envPassword,
+          lastSyncDate: null, // Reset sync date to pull new history
         },
       });
     }
