@@ -61,11 +61,14 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<{ current: number; total: number } | null>(null);
 
+  // Filter out doubtful/fallback trips (path length <= 2)
+  const trips = initialTrips.filter(t => t.path && t.path.length > 2);
+
   const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_auth0_') || user.geoRideEmail === 'motard@example.com';
 
   // Compute overall stats
-  const totalKm = initialTrips.reduce((acc, t) => acc + (t.distance || 0), 0);
-  const totalMinutes = initialTrips.reduce((acc, t) => acc + (t.duration || 0), 0);
+  const totalKm = trips.reduce((acc, t) => acc + (t.distance || 0), 0);
+  const totalMinutes = trips.reduce((acc, t) => acc + (t.duration || 0), 0);
   
   // Format total duration (hours & minutes)
   const totalHours = Math.floor(totalMinutes / 60);
@@ -206,7 +209,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               <div className="stat-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.1)', color: 'var(--accent-purple)' }}>
                 <Bike size={18} />
               </div>
-              <span className="stat-value">{initialTrips.length}</span>
+              <span className="stat-value">{trips.length}</span>
               <span className="stat-label">Trajets</span>
             </div>
           </div>
@@ -299,13 +302,13 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           <div>
             <h3 className="trips-section-title">Historique des Trajets</h3>
             <div className="trips-list-container">
-              {initialTrips.length === 0 ? (
+              {trips.length === 0 ? (
                 <div className="empty-trips-placeholder">
                   <Compass size={32} />
                   <span>Aucun trajet synchronisé. Cliquez sur "Synchroniser" ci-dessus pour charger l'historique GeoRide.</span>
                 </div>
               ) : (
-                initialTrips.map(trip => {
+                trips.map(trip => {
                   const isActive = activeTripId === trip.id;
                   const tripDate = new Date(trip.startedAt).toLocaleDateString('fr-FR');
                   
@@ -343,7 +346,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           </div>
           
           <div className="map-container-wrapper">
-            <Map trips={initialTrips} activeTripId={activeTripId} />
+            <Map trips={trips} activeTripId={activeTripId} />
           </div>
         </section>
         

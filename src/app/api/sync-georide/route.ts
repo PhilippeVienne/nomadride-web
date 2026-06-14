@@ -136,9 +136,43 @@ export async function POST(request: NextRequest) {
 
         // 3. Compute sync period
         const now = new Date();
-        const startDate = user.lastSyncDate
+        let startDate = user.lastSyncDate
           ? new Date(new Date(user.lastSyncDate).getTime() - 24 * 60 * 60 * 1000) // lastSyncDate - 24h
           : new Date(user.trackingStartDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)); // or trackingStartDate
+
+        // Fetch all local trips to identify doubtful/fallback paths (length <= 2) and self-heal them
+        const localTripsResult = await payloadInstance.find({
+          collection: 'trips',
+          where: {
+            user: {
+              equals: user.id,
+            },
+          },
+          limit: 1000,
+        });
+
+        const doubtfulTrips = localTripsResult.docs.filter(
+          (t: any) => !t.path || !Array.isArray(t.path) || t.path.length <= 2
+        );
+
+        if (doubtfulTrips.length > 0) {
+          let oldestDoubtfulDate = new Date();
+          for (const dt of doubtfulTrips) {
+            if (dt.startedAt) {
+              const dtDate = new Date(dt.startedAt);
+              if (dtDate < oldestDoubtfulDate) {
+                oldestDoubtfulDate = dtDate;
+              }
+            }
+          }
+
+          // Expand the synchronization timeframe to ensure GeoRide returns those fallback trips for re-fetching
+          const adjustedOldestDate = new Date(oldestDoubtfulDate.getTime() - 2 * 60 * 60 * 1000); // 2 hours buffer
+          if (adjustedOldestDate < startDate) {
+            startDate = adjustedOldestDate;
+            console.log(`[GeoRide Sync] Extending sync timeframe to ${startDate.toISOString()} to self-heal ${doubtfulTrips.length} doubtful trips.`);
+          }
+        }
 
         const isMock = process.env.MOCK_GEORIDE === 'true';
         let newTripsCount = 0;
