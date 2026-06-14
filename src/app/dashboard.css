@@ -335,60 +335,46 @@
   color: var(--color-text-primary);
 }
 
-/* Mobile dropdown menu */
-.mobile-menu-overlay {
+/* Mobile drawer overlay (backdrop) */
+.mobile-drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
-  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
 }
 
-.mobile-menu-panel {
-  background: #0f172a;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  margin: 72px 12px 0 0;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 220px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-  animation: slideInMenu 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Sidebar drawer header (mobile only) */
+.sidebar-drawer-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
 }
 
-@keyframes slideInMenu {
-  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.mobile-menu-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.mobile-menu-label {
-  font-size: 10px;
+.sidebar-drawer-title {
+  font-size: 15px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
 }
 
-.mobile-menu-divider {
-  height: 1px;
-  background: var(--color-border);
+.sidebar-drawer-close {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
-.mobile-menu-btn {
-  width: 100%;
-  text-align: left;
-  display: block;
+.sidebar-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
 }
 
 /* Mobile bottom navigation bar */
@@ -1324,35 +1310,63 @@
   }
 }
 
-/* Mobile Screens Stacking (Portrait) */
+/* Mobile: sidebar becomes a slide-in drawer, map takes full screen */
 @media (max-width: 767px) {
   .dashboard-layout {
+    /* Single column, map takes full height */
     grid-template-columns: 1fr;
-    grid-template-rows: auto 450px;
-    height: auto;
-    overflow: visible;
-    /* Extra bottom padding to avoid content under bottom nav */
-    padding-bottom: 70px;
+    grid-template-rows: 1fr;
+    height: calc(100vh - 64px);
+    overflow: hidden;
   }
+
+  /* Sidebar becomes a fixed drawer, off-screen by default */
   .sidebar {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    width: min(85vw, 360px);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid var(--color-border);
+    border-bottom: none;
     padding: 16px;
-    gap: 16px;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    gap: 14px;
+    /* Override height auto from desktop */
+    height: auto;
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
   }
+
+  /* When open, slides in from left */
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  /* Show drawer header on mobile */
+  .sidebar-drawer-header {
+    display: flex;
+  }
+
+  /* Map fills the full panel */
   .map-view-panel {
-    padding: 16px;
-    height: 450px;
+    padding: 0;
+    height: 100%;
+    gap: 0;
   }
+
+  /* Hide map header on mobile (space is precious) */
+  .map-view-header {
+    display: none;
+  }
+
   .map-container-wrapper {
-    min-height: 350px;
+    border-radius: 0;
+    min-height: 100%;
+    height: 100%;
   }
-  .station-list {
-    max-height: 350px;
-  }
-  .trips-list-container {
-    max-height: 250px;
-  }
+
   /* Show burger, hide desktop nav */
   .navbar-actions--desktop {
     display: none;
@@ -1360,15 +1374,28 @@
   .navbar-burger {
     display: flex;
   }
+
   /* Show bottom nav */
   .mobile-bottom-nav {
     display: flex;
   }
-  /* Pitstop settings always visible on desktop, collapsed by default on mobile — keep collapsed */
+
+  /* Adjust list heights for drawer */
+  .station-list {
+    max-height: 40vh;
+  }
+  .trips-list-container {
+    max-height: 40vh;
+  }
+
+  /* Pitstop settings: collapsible in drawer on mobile */
   .pitstop-settings-grid {
     display: none;
   }
   .pitstop-settings-grid.pitstop-settings-open {
+    display: flex;
+  }
+  .pitstop-settings-header {
     display: flex;
   }
 }

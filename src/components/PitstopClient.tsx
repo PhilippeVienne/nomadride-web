@@ -275,65 +275,43 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           </div>
         </div>
 
-        {/* Mobile burger */}
+        {/* Mobile burger — opens the sidebar drawer */}
         <button
           className="navbar-burger"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Menu"
+          aria-label="Ouvrir le menu"
         >
           {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </header>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile sidebar drawer overlay */}
       {isMobileMenuOpen && (
-        <div className="mobile-menu-overlay" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="mobile-menu-panel" onClick={e => e.stopPropagation()}>
-            <div className="mobile-menu-section">
-              <span className="mobile-menu-label">Compte</span>
-              {user.isAuthenticated ? (
-                <>
-                  <span className="auth-badge authenticated" style={{ alignSelf: 'flex-start' }}>Auth0 Connecté</span>
-                  <a href="/auth/logout" className="btn-auth btn-auth-logout mobile-menu-btn">Se déconnecter</a>
-                </>
-              ) : (
-                <>
-                  <span className="auth-badge guest" style={{ alignSelf: 'flex-start' }}>Mode Invité (Dev)</span>
-                  <a href="/auth/login" className="btn-auth btn-auth-login mobile-menu-btn">Se connecter avec Auth0</a>
-                </>
-              )}
-            </div>
-            <div className="mobile-menu-divider" />
-            <div className="mobile-menu-section">
-              <span className="mobile-menu-label">Navigation</span>
-              <button
-                className="btn-auth btn-auth-login mobile-menu-btn"
-                onClick={() => { router.push('/settings'); setIsMobileMenuOpen(false); }}
-              >
-                ⚙️ Réglages
-              </button>
-              <button
-                className="btn-auth btn-auth-login mobile-menu-btn"
-                onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
-              >
-                🧭 Mon Historique
-              </button>
-            </div>
-          </div>
-        </div>
+        <div className="mobile-drawer-overlay" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
       {/* Main Layout */}
       <main className="dashboard-layout">
 
-        {/* Left Sidebar Panel */}
-        <section className="sidebar">
+        {/* Left Sidebar Panel — also used as mobile drawer */}
+        <section className={`sidebar${isMobileMenuOpen ? ' sidebar--open' : ''}`}>
 
-          {/* Page navigation tabs (link style) */}
+          {/* Mobile drawer close button */}
+          <div className="sidebar-drawer-header">
+            <span className="sidebar-drawer-title">⛽ Pit-Stop</span>
+            <button
+              className="sidebar-drawer-close"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Navigation Tabs */}
           <div className="sidebar-tabs">
             <div
               className="sidebar-tab"
-              onClick={() => router.push('/')}
+              onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
             >
               🧭 Mon Historique
             </div>
@@ -341,6 +319,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               ⛽ Pit-Stop
             </div>
           </div>
+
 
           {/* Search Container */}
           <div className="input-group">
@@ -612,8 +591,8 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           <span>Historique</span>
         </button>
         <button
-          className="mobile-bottom-nav-item active"
-          onClick={() => router.push('/pitstop')}
+          className="mobile-bottom-nav-item"
+          onClick={() => setIsMobileMenuOpen(true)}
         >
           <span className="mobile-nav-icon">⛽</span>
           <span>Pit-Stop</span>
@@ -626,6 +605,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           <span>Réglages</span>
         </button>
       </nav>
+
     </div>
   );
 }
