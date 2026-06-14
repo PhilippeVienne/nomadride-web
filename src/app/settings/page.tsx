@@ -1,11 +1,11 @@
 import { getPayload } from 'payload';
-import config from '../../payload.config';
-import DashboardClient from '@/components/DashboardClient';
+import config from '../../../payload.config';
+import SettingsClient from '@/components/SettingsClient';
 import { auth0 } from '@/lib/auth0';
 
-export const revalidate = 0; // Disable server caching to ensure page updates when data is synced
+export const revalidate = 0; // Disable caching for user configuration updates
 
-export default async function Page() {
+export default async function SettingsPage() {
   const payload = await getPayload({ config });
 
   // Try to get authenticated Auth0 session
@@ -24,7 +24,7 @@ export default async function Page() {
     auth0Id = 'auth0|default_local_user_95';
   }
 
-  // 1. Fetch user record from Payload database
+  // Fetch user record from Payload database
   const userResult = await payload.find({
     collection: 'users',
     where: {
@@ -40,69 +40,38 @@ export default async function Page() {
   const envPassword = process.env.GEORIDE_PASSWORD;
 
   if (!user) {
+    // Provision the user on first visit if not yet present
     const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
     const userEmail = auth0Email || `motard_${sanitizedAuth0Id}@example.com`;
 
-    // Automatically provision the user record on first visit for plug-and-play testing
     user = await payload.create({
       collection: 'users',
       data: {
         email: userEmail,
-        password: 'admin_password_95', // Admin login password
+        password: 'admin_password_95',
         auth0Id,
         geoRideEmail: envEmail || userEmail,
-        geoRidePassword: envPassword || 'motard_secret_password_95', // Encrypted via hook
+        geoRidePassword: envPassword || 'motard_secret_password_95',
         trackingStartDate: process.env.GEORIDE_START_DATE
           ? new Date(process.env.GEORIDE_START_DATE).toISOString()
           : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       },
     });
-  } else if (envEmail && envPassword && user.geoRideEmail !== envEmail) {
-    // Dynamically update credentials if modified in env files
-    user = await payload.update({
-      collection: 'users',
-      id: user.id,
-      data: {
-        geoRideEmail: envEmail,
-        geoRidePassword: envPassword,
-        lastSyncDate: null, // Reset sync date to pull new history
-      },
-    });
   }
 
-  // 2. Fetch trips cached for this user
-  const tripsResult = await payload.find({
-    collection: 'trips',
-    where: {
-      user: {
-        equals: user.id,
-      },
-    },
-    limit: 1000,
-    sort: '-startedAt', // Display latest rides first in list
-  });
-
-  // Map results to clean types suitable for client-side hydration, casting IDs explicitly to string
-  const trips = tripsResult.docs.map(doc => ({
-    id: String(doc.id),
-    title: doc.title || undefined,
-    startedAt: doc.startedAt,
-    endedAt: doc.endedAt,
-    distance: doc.distance || undefined,
-    duration: doc.duration || undefined,
-    path: (doc.path as [number, number][]) || [],
-  }));
+  // Map to a clean serialized object for hydration
   const serializableUser = {
     id: String(user.id),
     geoRideEmail: user.geoRideEmail || undefined,
     lastSyncDate: user.lastSyncDate || undefined,
     auth0Id: user.auth0Id || auth0Id,
+    trackingStartDate: user.trackingStartDate || undefined,
+    selectedTrackers: (user.selectedTrackers as { trackerId: string }[])?.map(st => st.trackerId) || [],
     isAuthenticated: auth0Id !== 'auth0|default_local_user_95',
   };
 
   return (
-    <DashboardClient 
-      initialTrips={trips} 
+    <SettingsClient 
       user={serializableUser} 
     />
   );

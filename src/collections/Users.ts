@@ -48,5 +48,16 @@ export const Users: CollectionConfig = {
       name: 'trackingStartDate',
       type: 'date',
     },
+    {
+      name: 'selectedTrackers',
+      type: 'array',
+      fields: [
+        {
+          name: 'trackerId',
+          type: 'text',
+          required: true,
+        },
+      ],
+    },
   ],
 };

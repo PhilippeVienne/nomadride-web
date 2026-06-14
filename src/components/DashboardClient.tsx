@@ -44,6 +44,8 @@ interface User {
   id: string;
   geoRideEmail?: string;
   lastSyncDate?: string;
+  auth0Id?: string;
+  isAuthenticated?: boolean;
 }
 
 interface DashboardClientProps {
@@ -57,6 +59,9 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_auth0_') || user.geoRideEmail === 'motard@example.com';
 
   // Compute overall stats
   const totalKm = initialTrips.reduce((acc, t) => acc + (t.distance || 0), 0);
@@ -74,26 +79,64 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
     setIsSyncing(true);
     setSyncMessage(null);
     setSyncError(null);
+    setSyncProgress(null);
 
     try {
-      // Pass the userId in query params for easy fallback/testing
-      const res = await fetch(`/api/sync-georide?userId=auth0|default_local_user_95`, {
+      // Pass the user's Auth0 ID in query params for local dev/fallback testing if needed
+      const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
+      const res = await fetch(`/api/sync-georide${userIdParam}`, {
         method: 'POST',
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Erreur lors de la synchronisation');
       }
 
-      setSyncMessage(data.message || 'Synchronisation réussie.');
-      
-      // Force next.js to refresh server component data from database
-      router.refresh();
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new Error('Impossible de lire le flux de progression du serveur.');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // keep last incomplete line
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.error) {
+              throw new Error(data.error);
+            }
+            if (data.message) {
+              setSyncMessage(data.message);
+            }
+            if (data.current !== undefined && data.total !== undefined) {
+              setSyncProgress({ current: data.current, total: data.total });
+            }
+            if (data.step === 'done') {
+              // Force next.js to refresh server component data from database
+              router.refresh();
+            }
+          } catch (e: any) {
+            if (e.message && !e.message.includes('JSON')) {
+              throw e;
+            }
+          }
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setSyncError(err.message || 'Impossible de se connecter à la synchronisation GeoRide.');
+      setSyncMessage(null);
     } finally {
       setIsSyncing(false);
     }
@@ -107,8 +150,31 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           <Bike size={24} style={{ fill: 'currentColor' }} />
           <span>GeoRide Rider Map</span>
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-          Pilote: <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{user.geoRideEmail || 'motard@example.com'}</span>
+        
+        <div className="navbar-actions">
+          <div className="auth-status-container">
+            {user.isAuthenticated ? (
+              <>
+                <span className="auth-badge authenticated">Auth0 Connecté</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>|</span>
+                <a href="/auth/logout" className="btn-auth btn-auth-logout">
+                  Se déconnecter
+                </a>
+              </>
+            ) : (
+              <>
+                <span className="auth-badge guest">Mode Invité (Dev)</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>|</span>
+                <a href="/auth/login" className="btn-auth btn-auth-login">
+                  Se connecter avec Auth0
+                </a>
+              </>
+            )}
+            <span style={{ color: 'var(--color-text-muted)' }}>|</span>
+            <button className="btn-auth btn-auth-login" onClick={() => router.push('/settings')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Réglages
+            </button>
+          </div>
         </div>
       </header>
 
@@ -163,9 +229,42 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
 
           {/* Success / Error Feedbacks */}
           {syncMessage && (
-            <div style={{ color: 'var(--accent-green)', fontSize: '13px', background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px' }}>
-              <span>✓</span>
-              <span>{syncMessage}</span>
+            <div style={{ 
+              color: isSyncing ? 'var(--accent-orange)' : 'var(--accent-green)', 
+              fontSize: '13px', 
+              background: isSyncing ? 'rgba(249, 115, 22, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+              padding: '12px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {isSyncing ? (
+                  <RefreshCw size={14} className="spinner" style={{ color: 'var(--accent-orange)' }} />
+                ) : (
+                  <span>✓</span>
+                )}
+                <span>{syncMessage}</span>
+              </div>
+              
+              {isSyncing && syncProgress && syncProgress.total > 0 && (
+                <div style={{ width: '100%', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
+                    <span>Progression</span>
+                    <span>{syncProgress.current} / {syncProgress.total} ({Math.round((syncProgress.current / syncProgress.total) * 100)}%)</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${(syncProgress.current / syncProgress.total) * 100}%`, 
+                      height: '100%', 
+                      background: 'linear-gradient(90deg, #f97316, #fb923c)', 
+                      borderRadius: '3px',
+                      transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+                    }} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -175,6 +274,23 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               <span>{syncError}</span>
             </div>
           )}
+
+          {/* GeoRide Credentials Configuration Summary Link */}
+          <div className="creds-container">
+            <div className="creds-status-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span className="creds-label">Compte GeoRide connecté :</span>
+                <span className="creds-email">{isDefaultLocalEmail ? 'Non configuré' : user.geoRideEmail}</span>
+              </div>
+              <button 
+                className="btn-creds-edit" 
+                onClick={() => router.push('/settings')}
+                style={{ width: '100%', textAlign: 'center' }}
+              >
+                Gérer mes réglages
+              </button>
+            </div>
+          </div>
 
           {/* Separation line */}
           <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)' }} />
