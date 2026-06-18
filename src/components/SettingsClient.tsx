@@ -393,6 +393,32 @@ export default function SettingsClient({ user }: SettingsClientProps) {
           </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav">
+        <button
+          className="mobile-bottom-nav-item"
+          onClick={() => router.push('/')}
+        >
+          <span className="mobile-nav-icon">🧭</span>
+          <span>Historique</span>
+        </button>
+        <button
+          className="mobile-bottom-nav-item"
+          onClick={() => router.push('/pitstop')}
+        >
+          <span className="mobile-nav-icon">⛽</span>
+          <span>Pit-Stop</span>
+        </button>
+        <button
+          className="mobile-bottom-nav-item active"
+          onClick={() => {}}
+        >
+          <span className="mobile-nav-icon">⚙️</span>
+          <span>Réglages</span>
+        </button>
+      </nav>
+
     </div>
   );
 }

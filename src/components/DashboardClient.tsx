@@ -428,7 +428,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
         <button
-          className="mobile-bottom-nav-item"
+          className="mobile-bottom-nav-item active"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <span className="mobile-nav-icon">🧭</span>

@@ -591,7 +591,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           <span>Historique</span>
         </button>
         <button
-          className="mobile-bottom-nav-item"
+          className="mobile-bottom-nav-item active"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <span className="mobile-nav-icon">⛽</span>
