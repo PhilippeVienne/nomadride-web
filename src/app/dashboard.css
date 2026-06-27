@@ -1258,9 +1258,9 @@
 }
 
 .leaflet-tile {
-  box-sizing: content-box !important;
-  margin: -1px !important;
-  padding: 1px !important;
+  width: 257px !important;
+  height: 257px !important;
+  margin: -1px 0 0 -1px !important;
   outline: 1px solid transparent;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
