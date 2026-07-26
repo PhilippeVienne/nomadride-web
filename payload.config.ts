@@ -71,6 +71,7 @@ export default buildConfig({
           }
         : false,
     },
+    push: true,
     tablesFilter: [
       '!spatial_ref_sys',
       '!geography_columns',
