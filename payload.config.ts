@@ -14,6 +14,8 @@ import { OsmQueries } from './src/collections/OsmQueries';
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
+const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
 export default buildConfig({
   admin: {
     user: 'users',
@@ -24,6 +26,9 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
+      ssl: process.env.DATABASE_URI?.includes('sslmode=') || isProd
+        ? { rejectUnauthorized: false }
+        : false,
     },
     tablesFilter: [
       '!spatial_ref_sys',
