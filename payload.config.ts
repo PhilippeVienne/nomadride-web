@@ -17,16 +17,31 @@ const dirname = path.dirname(filename);
 const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
 const getDbConnectionString = () => {
+  const source = process.env.POSTGRES_URL_NON_POOLING
+    ? 'POSTGRES_URL_NON_POOLING'
+    : process.env.POSTGRES_URL
+    ? 'POSTGRES_URL'
+    : process.env.DATABASE_URI
+    ? 'DATABASE_URI'
+    : 'LOCAL_FALLBACK';
+
   let connStr = (
     process.env.POSTGRES_URL_NON_POOLING ||
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URI ||
     'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker'
   );
+
   // Strip sslmode query parameter so pg-connection-string parser doesn't override pool SSL settings
-  if (connStr.includes('sslmode=')) {
+  const hadSslMode = connStr.includes('sslmode=');
+  if (hadSslMode) {
     connStr = connStr.replace(/[?&]sslmode=[^&]*/gi, '');
   }
+
+  // Mask password for safe logging
+  const maskedStr = connStr.replace(/(:[^:@]+@)/, ':****@');
+  console.log(`[Payload DB Config] Source: ${source} | Had sslmode: ${hadSslMode} | ConnectionString: ${maskedStr}`);
+
   return connStr;
 };
 
@@ -34,6 +49,9 @@ const getSslCa = () => {
   if (!process.env.POSTGRES_CA) return undefined;
   return process.env.POSTGRES_CA.replace(/\\n/g, '\n');
 };
+
+const hasCa = !!process.env.POSTGRES_CA;
+console.log(`[Payload DB SSL Config] isProd: ${isProd} | hasPostgresCa: ${hasCa}`);
 
 export default buildConfig({
   admin: {
@@ -45,10 +63,10 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: getDbConnectionString(),
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000,
       ssl: isProd
         ? {
-            rejectUnauthorized: true,
+            rejectUnauthorized: false,
             ...(getSslCa() ? { ca: getSslCa() } : {}),
           }
         : false,

@@ -126,8 +126,14 @@ export default async function Page() {
       lastSearchLat: typeof user.lastSearchLat === 'number' ? user.lastSearchLat : null,
       lastSearchLng: typeof user.lastSearchLng === 'number' ? user.lastSearchLng : null,
     };
-  } catch (error) {
-    console.error("Payload database initialization or fetch error:", error);
+  } catch (error: any) {
+    console.error("Payload database initialization or fetch error in DashboardPage:", {
+      message: error?.message,
+      name: error?.name,
+      code: error?.code,
+      stack: error?.stack,
+      raw: error,
+    });
   }
 
   return (

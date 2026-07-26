@@ -119,7 +119,13 @@ export async function POST(request: NextRequest) {
       message: 'Réglages enregistrés avec succès.',
     });
   } catch (error: any) {
-    console.error('[GeoRide Settings Update API Error]:', error);
+    console.error('[GeoRide Settings Update API Error]:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      raw: error,
+    });
     return NextResponse.json(
       { error: error?.message || 'Une erreur interne est survenue lors de l\'enregistrement des réglages.' },
       { status: 500 }
