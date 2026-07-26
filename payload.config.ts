@@ -25,9 +25,9 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95',
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
+      connectionString: process.env.DATABASE_URI || process.env.POSTGRES_URL || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
       connectionTimeoutMillis: 5000,
-      ssl: process.env.DATABASE_URI?.includes('sslmode=') || isProd
+      ssl: (process.env.DATABASE_URI || process.env.POSTGRES_URL)?.includes('sslmode=') || isProd
         ? { rejectUnauthorized: false }
         : false,
     },
