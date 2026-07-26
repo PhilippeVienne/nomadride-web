@@ -26,6 +26,7 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
+      connectionTimeoutMillis: 5000,
       ssl: process.env.DATABASE_URI?.includes('sslmode=') || isProd
         ? { rejectUnauthorized: false }
         : false,
