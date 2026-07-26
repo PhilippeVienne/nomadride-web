@@ -16,6 +16,16 @@ const dirname = path.dirname(filename);
 
 const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
+const getDbConnectionString = () => {
+  let connStr = process.env.POSTGRES_URL || process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker';
+  if (connStr.includes('sslmode=require')) {
+    connStr = connStr.replace('sslmode=require', 'sslmode=no-verify');
+  } else if (isProd && !connStr.includes('sslmode=')) {
+    connStr += (connStr.includes('?') ? '&' : '?') + 'sslmode=no-verify';
+  }
+  return connStr;
+};
+
 export default buildConfig({
   admin: {
     user: 'users',
@@ -25,9 +35,9 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95',
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker',
+      connectionString: getDbConnectionString(),
       connectionTimeoutMillis: 5000,
-      ssl: (process.env.POSTGRES_URL || process.env.DATABASE_URI)?.includes('sslmode=') || isProd
+      ssl: isProd || getDbConnectionString().includes('sslmode=')
         ? { rejectUnauthorized: false }
         : false,
     },
