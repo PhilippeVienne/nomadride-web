@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
 import { auth0 } from '../../../../lib/auth0';
-
-import { pushDevSchema } from '@payloadcms/drizzle';
+import { ensurePayloadSchema } from '../../../../lib/ensureSchema';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const { geoRideEmail, geoRidePassword, trackingStartDate, selectedTrackers } = body;
 
-    // 2. Fetch user record in Payload (Auto-push schema if tables missing)
+    // 2. Fetch user record in Payload (Auto-create schema if tables missing)
     let userResult;
     try {
       userResult = await payloadInstance.find({
@@ -52,8 +51,8 @@ export async function POST(request: NextRequest) {
       });
     } catch (err: any) {
       if (err?.cause?.code === '42P01' || String(err?.message).includes('users') || String(err).includes('42P01')) {
-        console.log('[Payload DB Init] Relation "users" missing in PostgreSQL (code 42P01). Pushing database schema via pushDevSchema...');
-        await pushDevSchema(payloadInstance.db as any);
+        console.log('[Payload DB Init] Relation "users" missing in PostgreSQL (code 42P01). Creating database tables via ensurePayloadSchema...');
+        await ensurePayloadSchema(payloadInstance);
         userResult = await payloadInstance.find({
           collection: 'users',
           where: {

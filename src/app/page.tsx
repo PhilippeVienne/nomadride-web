@@ -1,8 +1,8 @@
 import { getPayload } from 'payload';
-import { pushDevSchema } from '@payloadcms/drizzle';
 import config from '../../payload.config';
 import DashboardClient from '@/components/DashboardClient';
 import { auth0 } from '@/lib/auth0';
+import { ensurePayloadSchema } from '@/lib/ensureSchema';
 
 export const revalidate = 0; // Disable server caching to ensure page updates when data is synced
 
@@ -57,8 +57,8 @@ export default async function Page() {
       });
     } catch (err: any) {
       if (err?.cause?.code === '42P01' || String(err?.message).includes('users') || String(err).includes('42P01')) {
-        console.log('[Dashboard Page] Relation "users" missing (code 42P01). Pushing database schema via pushDevSchema...');
-        await pushDevSchema(payload.db as any);
+        console.log('[Dashboard Page] Relation "users" missing (code 42P01). Creating database tables via ensurePayloadSchema...');
+        await ensurePayloadSchema(payload);
         userResult = await payload.find({
           collection: 'users',
           where: {
