@@ -17,12 +17,17 @@ const dirname = path.dirname(filename);
 const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
 const getDbConnectionString = () => {
-  return (
+  let connStr = (
     process.env.POSTGRES_URL_NON_POOLING ||
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URI ||
     'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker'
   );
+  // Strip sslmode query parameter so pg-connection-string parser doesn't override pool SSL settings
+  if (connStr.includes('sslmode=')) {
+    connStr = connStr.replace(/[?&]sslmode=[^&]*/gi, '');
+  }
+  return connStr;
 };
 
 export default buildConfig({
@@ -38,7 +43,7 @@ export default buildConfig({
       connectionTimeoutMillis: 5000,
       ssl: isProd
         ? {
-            rejectUnauthorized: process.env.POSTGRES_CA ? true : false,
+            rejectUnauthorized: false,
             ...(process.env.POSTGRES_CA ? { ca: process.env.POSTGRES_CA } : {}),
           }
         : false,
