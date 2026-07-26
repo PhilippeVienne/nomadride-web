@@ -17,13 +17,12 @@ const dirname = path.dirname(filename);
 const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
 const getDbConnectionString = () => {
-  let connStr = process.env.POSTGRES_URL || process.env.DATABASE_URI || 'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker';
-  if (connStr.includes('sslmode=require')) {
-    connStr = connStr.replace('sslmode=require', 'sslmode=no-verify');
-  } else if (isProd && !connStr.includes('sslmode=')) {
-    connStr += (connStr.includes('?') ? '&' : '?') + 'sslmode=no-verify';
-  }
-  return connStr;
+  return (
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URI ||
+    'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker'
+  );
 };
 
 export default buildConfig({
@@ -37,8 +36,11 @@ export default buildConfig({
     pool: {
       connectionString: getDbConnectionString(),
       connectionTimeoutMillis: 5000,
-      ssl: isProd || getDbConnectionString().includes('sslmode=')
-        ? { rejectUnauthorized: false }
+      ssl: isProd
+        ? {
+            rejectUnauthorized: true,
+            ...(process.env.POSTGRES_CA ? { ca: process.env.POSTGRES_CA } : {}),
+          }
         : false,
     },
     tablesFilter: [
