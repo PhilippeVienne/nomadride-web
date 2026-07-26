@@ -38,7 +38,7 @@ export default buildConfig({
       connectionTimeoutMillis: 5000,
       ssl: isProd
         ? {
-            rejectUnauthorized: true,
+            rejectUnauthorized: process.env.POSTGRES_CA ? true : false,
             ...(process.env.POSTGRES_CA ? { ca: process.env.POSTGRES_CA } : {}),
           }
         : false,
