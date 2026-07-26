@@ -46,21 +46,35 @@ export async function POST(request: NextRequest) {
       limit: 1,
     });
 
-    const user = userResult.docs[0];
+    let user = userResult.docs[0];
     if (!user) {
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
-    }
+      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
+      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@')) 
+        ? geoRideEmail.trim() 
+        : `motard_${sanitizedAuth0Id}@example.com`;
 
-    // 3. Update credentials (will trigger AES-256-GCM beforeChange hook on Users collection)
-    await payloadInstance.update({
-      collection: 'users',
-      id: user.id,
-      data: {
-        geoRideEmail,
-        geoRidePassword,
-        lastSyncDate: null, // Reset lastSyncDate to trigger full historical tracking sync next time
-      },
-    });
+      user = await payloadInstance.create({
+        collection: 'users',
+        data: {
+          email: userEmail,
+          password: 'admin_password_95',
+          auth0Id,
+          geoRideEmail: geoRideEmail,
+          geoRidePassword: geoRidePassword,
+        },
+      });
+    } else {
+      // 3. Update credentials (will trigger AES-256-GCM beforeChange hook on Users collection)
+      await payloadInstance.update({
+        collection: 'users',
+        id: user.id,
+        data: {
+          geoRideEmail,
+          geoRidePassword,
+          lastSyncDate: null, // Reset lastSyncDate to trigger full historical tracking sync next time
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

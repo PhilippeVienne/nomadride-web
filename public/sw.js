@@ -13,9 +13,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through fetch handler to satisfy PWA criteria.
-  // We let standard browser loading/caching rules handle next.js API/document requests,
-  // preventing any conflicts with dynamic data layers, Leaflet tiles, and Auth0 sessions.
+  // Pass-through fetch handler for PWA compatibility.
+  // Standard browser loading/caching rules handle next.js API/document requests.
+  event.respondWith(fetch(event.request));
 });
 
 // Handle commands from the client UI

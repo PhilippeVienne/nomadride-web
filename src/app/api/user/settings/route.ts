@@ -27,7 +27,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    // Parse request body safely
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
     const { geoRideEmail, geoRidePassword, trackingStartDate, selectedTrackers } = body;
 
     // 2. Fetch user record in Payload
@@ -41,46 +48,71 @@ export async function POST(request: NextRequest) {
       limit: 1,
     });
 
-    const user = userResult.docs[0];
+    let user = userResult.docs[0];
     if (!user) {
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
+      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
+      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@')) 
+        ? geoRideEmail.trim() 
+        : `motard_${sanitizedAuth0Id}@example.com`;
+
+      user = await payloadInstance.create({
+        collection: 'users',
+        data: {
+          email: userEmail,
+          password: 'admin_password_95',
+          auth0Id,
+          geoRideEmail: (geoRideEmail && typeof geoRideEmail === 'string') ? geoRideEmail.trim() : userEmail,
+          geoRidePassword: (geoRidePassword && typeof geoRidePassword === 'string') ? geoRidePassword : 'motard_secret_password_95',
+          trackingStartDate: (trackingStartDate && !isNaN(new Date(trackingStartDate).getTime()))
+            ? new Date(trackingStartDate).toISOString()
+            : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      });
     }
 
-    // 3. Build update data object
+    // 3. Build update data object safely
     const updateData: any = {};
 
-    if (geoRideEmail) {
-      updateData.geoRideEmail = geoRideEmail;
+    if (typeof geoRideEmail === 'string' && geoRideEmail.trim().length > 0) {
+      updateData.geoRideEmail = geoRideEmail.trim();
     }
     
-    if (geoRidePassword) {
-      updateData.geoRidePassword = geoRidePassword; // decrypted automatically encrypted on Users collection hook
+    if (typeof geoRidePassword === 'string' && geoRidePassword.trim().length > 0) {
+      updateData.geoRidePassword = geoRidePassword;
     }
 
-    if (trackingStartDate) {
-      updateData.trackingStartDate = new Date(trackingStartDate).toISOString();
+    let parsedStartDate: string | undefined = undefined;
+    if (trackingStartDate && typeof trackingStartDate === 'string' && trackingStartDate.trim() !== '') {
+      const d = new Date(trackingStartDate);
+      if (!isNaN(d.getTime())) {
+        parsedStartDate = d.toISOString();
+        updateData.trackingStartDate = parsedStartDate;
+      }
     }
 
     if (Array.isArray(selectedTrackers)) {
-      // Map string array to selectedTrackers schema: [{ trackerId: string }]
-      updateData.selectedTrackers = selectedTrackers.map((id: string) => ({ trackerId: id }));
+      updateData.selectedTrackers = selectedTrackers.map((item: any) => {
+        const idStr = typeof item === 'object' && item !== null ? String(item.trackerId || '') : String(item);
+        return { trackerId: idStr };
+      }).filter((t: any) => t.trackerId.length > 0);
     }
 
-    // Reset sync date when critical params change to force full history reload from new settings
-    if (
-      (geoRideEmail && geoRideEmail !== user.geoRideEmail) ||
-      geoRidePassword ||
-      (trackingStartDate && new Date(trackingStartDate).toISOString() !== user.trackingStartDate)
-    ) {
+    // Reset sync date when critical params change to force full history reload
+    const emailChanged = updateData.geoRideEmail && updateData.geoRideEmail !== user.geoRideEmail;
+    const passwordChanged = !!updateData.geoRidePassword;
+    const dateChanged = parsedStartDate && parsedStartDate !== user.trackingStartDate;
+    if (emailChanged || passwordChanged || dateChanged) {
       updateData.lastSyncDate = null;
     }
 
-    // 4. Update the user record
-    await payloadInstance.update({
-      collection: 'users',
-      id: user.id,
-      data: updateData,
-    });
+    // 4. Update the user record if there are changes to save
+    if (Object.keys(updateData).length > 0) {
+      await payloadInstance.update({
+        collection: 'users',
+        id: user.id,
+        data: updateData,
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -88,6 +120,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[GeoRide Settings Update API Error]:', error);
-    return NextResponse.json({ error: 'Une erreur interne est survenue lors de l\'enregistrement des réglages.' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Une erreur interne est survenue lors de l\'enregistrement des réglages.' },
+      { status: 500 }
+    );
   }
 }

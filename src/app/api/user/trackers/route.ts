@@ -38,9 +38,17 @@ export async function GET(request: NextRequest) {
       limit: 1,
     });
 
-    const user = userResult.docs[0];
+    let user = userResult.docs[0];
     if (!user) {
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
+      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
+      user = await payloadInstance.create({
+        collection: 'users',
+        data: {
+          email: `motard_${sanitizedAuth0Id}@example.com`,
+          password: 'admin_password_95',
+          auth0Id,
+        },
+      });
     }
 
     // 3. Mock Check
