@@ -1,4 +1,5 @@
 import { getPayload } from 'payload';
+import { pushDevSchema } from '@payloadcms/drizzle';
 import config from '../../payload.config';
 import DashboardClient from '@/components/DashboardClient';
 import { auth0 } from '@/lib/auth0';
@@ -42,16 +43,35 @@ export default async function Page() {
   try {
     const payload = await getPayload({ config });
 
-    // 1. Fetch user record from Payload database
-    const userResult = await payload.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
+    // 1. Fetch user record from Payload database (Auto-push schema if missing)
+    let userResult;
+    try {
+      userResult = await payload.find({
+        collection: 'users',
+        where: {
+          auth0Id: {
+            equals: auth0Id,
+          },
         },
-      },
-      limit: 1,
-    });
+        limit: 1,
+      });
+    } catch (err: any) {
+      if (err?.cause?.code === '42P01' || String(err?.message).includes('users') || String(err).includes('42P01')) {
+        console.log('[Dashboard Page] Relation "users" missing (code 42P01). Pushing database schema via pushDevSchema...');
+        await pushDevSchema(payload.db as any);
+        userResult = await payload.find({
+          collection: 'users',
+          where: {
+            auth0Id: {
+              equals: auth0Id,
+            },
+          },
+          limit: 1,
+        });
+      } else {
+        throw err;
+      }
+    }
 
     let user = userResult.docs[0];
     const envEmail = process.env.GEORIDE_EMAIL;

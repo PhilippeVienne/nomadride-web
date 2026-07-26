@@ -3,6 +3,8 @@ import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
 import { auth0 } from '../../../../lib/auth0';
 
+import { pushDevSchema } from '@payloadcms/drizzle';
+
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
@@ -26,7 +28,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // Parse request body
     // Parse request body safely
     let body: any = {};
     try {
@@ -37,16 +38,35 @@ export async function POST(request: NextRequest) {
 
     const { geoRideEmail, geoRidePassword, trackingStartDate, selectedTrackers } = body;
 
-    // 2. Fetch user record in Payload
-    const userResult = await payloadInstance.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
+    // 2. Fetch user record in Payload (Auto-push schema if tables missing)
+    let userResult;
+    try {
+      userResult = await payloadInstance.find({
+        collection: 'users',
+        where: {
+          auth0Id: {
+            equals: auth0Id,
+          },
         },
-      },
-      limit: 1,
-    });
+        limit: 1,
+      });
+    } catch (err: any) {
+      if (err?.cause?.code === '42P01' || String(err?.message).includes('users') || String(err).includes('42P01')) {
+        console.log('[Payload DB Init] Relation "users" missing in PostgreSQL (code 42P01). Pushing database schema via pushDevSchema...');
+        await pushDevSchema(payloadInstance.db as any);
+        userResult = await payloadInstance.find({
+          collection: 'users',
+          where: {
+            auth0Id: {
+              equals: auth0Id,
+            },
+          },
+          limit: 1,
+        });
+      } else {
+        throw err;
+      }
+    }
 
     let user = userResult.docs[0];
     if (!user) {
