@@ -30,6 +30,11 @@ const getDbConnectionString = () => {
   return connStr;
 };
 
+const getSslCa = () => {
+  if (!process.env.POSTGRES_CA) return undefined;
+  return process.env.POSTGRES_CA.replace(/\\n/g, '\n');
+};
+
 export default buildConfig({
   admin: {
     user: 'users',
@@ -44,7 +49,7 @@ export default buildConfig({
       ssl: isProd
         ? {
             rejectUnauthorized: true,
-            ...(process.env.POSTGRES_CA ? { ca: process.env.POSTGRES_CA } : {}),
+            ...(getSslCa() ? { ca: getSslCa() } : {}),
           }
         : false,
     },
