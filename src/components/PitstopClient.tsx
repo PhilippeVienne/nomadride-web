@@ -314,12 +314,14 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
 
           {/* Navigation Tabs */}
           <div className="sidebar-tabs">
-            <div
-              className="sidebar-tab"
-              onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
-            >
-              🧭 Mon Historique
-            </div>
+            {user.isAuthenticated && (
+              <div
+                className="sidebar-tab"
+                onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
+              >
+                🧭 Mon Historique
+              </div>
+            )}
             <div className="sidebar-tab active">
               ⛽ Pit-Stop
             </div>
@@ -591,13 +593,15 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
 
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
-        <button
-          className="mobile-bottom-nav-item"
-          onClick={() => router.push('/')}
-        >
-          <span className="mobile-nav-icon">🧭</span>
-          <span>Historique</span>
-        </button>
+        {user.isAuthenticated && (
+          <button
+            className="mobile-bottom-nav-item"
+            onClick={() => router.push('/')}
+          >
+            <span className="mobile-nav-icon">🧭</span>
+            <span>Historique</span>
+          </button>
+        )}
         <button
           className="mobile-bottom-nav-item active"
           onClick={() => setIsMobileMenuOpen(true)}

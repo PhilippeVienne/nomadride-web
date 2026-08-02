@@ -1,4 +1,5 @@
 import { getPayload } from 'payload';
+import { redirect } from 'next/navigation';
 import config from '../../payload.config';
 import DashboardClient from '@/components/DashboardClient';
 import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
@@ -7,6 +8,11 @@ export const revalidate = 0; // Disable server caching to ensure page updates wh
 
 export default async function Page() {
   const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
+
+  // Guests only get the Pit-Stop demo; trip history requires a GeoRide account.
+  if (!isAuthenticated) {
+    redirect('/pitstop');
+  }
 
   let trips: any[] = [];
   let serializableUser = {
