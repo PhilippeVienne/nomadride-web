@@ -6,10 +6,13 @@ export const Trips: CollectionConfig = {
     useAsTitle: 'title',
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    // Trips carry GPS traces, so scope every operation to the owning user.
+    // Creation/sync happens server-side via the Payload Local API, which
+    // bypasses access control.
+    read: ({ req }) => (req.user ? { user: { equals: req.user.id } } : false),
+    create: () => false,
+    update: ({ req }) => (req.user ? { user: { equals: req.user.id } } : false),
+    delete: ({ req }) => (req.user ? { user: { equals: req.user.id } } : false),
   },
   fields: [
     {

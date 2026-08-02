@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { auth0 } from '../../../../lib/auth0';
+import { getOrCreateUser, resolveAuth0Session } from '../../../../lib/getSessionUser';
 
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4)
-    let auth0Id: string | undefined;
-    try {
-      const session = await auth0.getSession(request);
-      auth0Id = session?.user?.sub;
-    } catch (e) {
-      console.warn("Auth0 not fully configured or no active session in user preferences endpoint.");
-    }
-
-    // Fallback for local testing/development
-    if (!auth0Id) {
-      const url = new URL(request.url);
-      auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-    }
-
-    if (!auth0Id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    // 1. Get user session (Auth0 v4, with local-dev fallback)
+    const { auth0Id, auth0Email } = await resolveAuth0Session(request);
 
     // Parse request body
     const body = await request.json();
@@ -39,29 +23,8 @@ export async function POST(request: NextRequest) {
       lastSearchLng,
     } = body;
 
-    // 2. Fetch user record in Payload
-    const userResult = await payloadInstance.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-      limit: 1,
-    });
-
-    let user = userResult.docs[0];
-    if (!user) {
-      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-      user = await payloadInstance.create({
-        collection: 'users',
-        data: {
-          email: `motard_${sanitizedAuth0Id}@example.com`,
-          password: 'admin_password_95',
-          auth0Id,
-        },
-      });
-    }
+    // 2. Fetch or create the user record in Payload
+    const user = await getOrCreateUser(payloadInstance, auth0Id, auth0Email);
 
     // 3. Build update data object
     const updateData: any = {};

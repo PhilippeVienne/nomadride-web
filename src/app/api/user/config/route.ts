@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { auth0 } from '../../../../lib/auth0';
+import { findUserByAuth0Id, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { generateRandomPassword } from '../../../../utils/crypto';
 
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4)
-    let auth0Id: string | undefined;
-    try {
-      const session = await auth0.getSession(request);
-      auth0Id = session?.user?.sub;
-    } catch (e) {
-      console.warn("Auth0 not fully configured or no active session in user config update.");
-    }
-
-    // Fallback for local testing/development
-    if (!auth0Id) {
-      const url = new URL(request.url);
-      auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-    }
-
-    if (!auth0Id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    // 1. Get user session (Auth0 v4, with local-dev fallback)
+    const { auth0Id } = await resolveAuth0Session(request);
 
     // Parse request body
     const body = await request.json();
@@ -36,28 +21,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Fetch user record in Payload
-    const userResult = await payloadInstance.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-      limit: 1,
-    });
+    const userResult = await findUserByAuth0Id(payloadInstance, auth0Id);
 
     let user = userResult.docs[0];
     if (!user) {
       const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@')) 
-        ? geoRideEmail.trim() 
+      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@'))
+        ? geoRideEmail.trim()
         : `motard_${sanitizedAuth0Id}@example.com`;
 
       user = await payloadInstance.create({
         collection: 'users',
         data: {
           email: userEmail,
-          password: 'admin_password_95',
+          // Payload requires a password for this auth-enabled collection, but
+          // it's never used to log in directly (Auth0 handles authentication).
+          password: generateRandomPassword(),
           auth0Id,
           geoRideEmail: geoRideEmail,
           geoRidePassword: geoRidePassword,

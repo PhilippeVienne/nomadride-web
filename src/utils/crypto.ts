@@ -2,6 +2,26 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
+const DEFAULT_LOCAL_PAYLOAD_SECRET = 'a_very_secure_local_secret_key_for_payload_development_95';
+
+/**
+ * Returns the Payload secret used across the app for signing and for
+ * encrypting/decrypting GeoRide credentials. Centralized here so the
+ * local-dev fallback only needs to live in one place.
+ */
+export function getPayloadSecret(): string {
+  return process.env.PAYLOAD_SECRET || DEFAULT_LOCAL_PAYLOAD_SECRET;
+}
+
+/**
+ * Generates an unguessable random password. Used to provision the Payload
+ * `users` record backing an Auth0 identity — that password field is never
+ * used to log in (auth is handled by Auth0), so it must not be a shared,
+ * hardcoded value.
+ */
+export function generateRandomPassword(): string {
+  return crypto.randomBytes(24).toString('hex');
+}
 
 /**
  * Encrypts a string using AES-256-GCM and a custom secret key.

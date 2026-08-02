@@ -1,55 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { auth0 } from '../../../../lib/auth0';
-import { decrypt } from '../../../../utils/crypto';
+import { getOrCreateUser, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { decrypt, getPayloadSecret } from '../../../../utils/crypto';
 
 export async function GET(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4)
-    let auth0Id: string | undefined;
-    try {
-      const session = await auth0.getSession(request);
-      auth0Id = session?.user?.sub;
-    } catch (e) {
-      console.warn("Auth0 not fully configured or no active session in trackers endpoint.");
-    }
+    // 1. Get user session (Auth0 v4, with local-dev fallback)
+    const { auth0Id, auth0Email } = await resolveAuth0Session(request);
 
-    // Fallback for local testing/development
-    if (!auth0Id) {
-      const url = new URL(request.url);
-      auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-    }
-
-    if (!auth0Id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
-
-    // 2. Fetch user record from Payload database
-    const userResult = await payloadInstance.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-      limit: 1,
-    });
-
-    let user = userResult.docs[0];
-    if (!user) {
-      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-      user = await payloadInstance.create({
-        collection: 'users',
-        data: {
-          email: `motard_${sanitizedAuth0Id}@example.com`,
-          password: 'admin_password_95',
-          auth0Id,
-        },
-      });
-    }
+    // 2. Fetch or create the user record from Payload database
+    const user = await getOrCreateUser(payloadInstance, auth0Id, auth0Email);
 
     // 3. Mock Check
     const isMock = process.env.MOCK_GEORIDE === 'true';
@@ -67,8 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Decrypt password
-    const secret = process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95';
-    const decryptedPassword = decrypt(user.geoRidePassword, secret);
+    const decryptedPassword = decrypt(user.geoRidePassword, getPayloadSecret());
 
     // 4. Authenticate with GeoRide API
     const loginRes = await fetch('https://api.georide.fr/user/login', {
