@@ -1252,18 +1252,8 @@
   height: auto !important;
 }
 
-/* Fix Leaflet map tile lines (sub-pixel rendering gaps) */
 .leaflet-container {
   background-color: #f2efe9 !important;
-}
-
-.leaflet-tile {
-  width: 257px !important;
-  height: 257px !important;
-  margin: -1px 0 0 -1px !important;
-  outline: 1px solid transparent;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 

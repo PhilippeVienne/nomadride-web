@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
@@ -107,12 +107,15 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
   const [isLocating, setIsLocating] = useState(false);
 
   // Autocomplete
+  const lastSelectedQueryRef = useRef<string | null>(user.lastSearchQuery || null);
+
   useEffect(() => {
     if (
       !searchQuery ||
       searchQuery.trim().length < 3 ||
       searchQuery.startsWith('Trajet :') ||
-      searchQuery === 'Ma Position'
+      searchQuery === 'Ma Position' ||
+      searchQuery === lastSelectedQueryRef.current
     ) {
       setAutocompleteResults([]);
       setShowAutocomplete(false);
@@ -201,8 +204,10 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
   }, [selectedFuel, radius, fillSize, consumption, excludeDistance, searchQuery, searchCenter, user.auth0Id]);
 
   const handleSelectAutocomplete = (item: { name: string; lat: number; lon: number }) => {
+    lastSelectedQueryRef.current = item.name;
     setSearchQuery(item.name);
     setSearchCenter([item.lat, item.lon]);
+    setAutocompleteResults([]);
     setShowAutocomplete(false);
   };
 
@@ -331,7 +336,10 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
                   type="text"
                   placeholder="Rechercher une ville, adresse..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    lastSelectedQueryRef.current = null;
+                    setSearchQuery(e.target.value);
+                  }}
                   style={{ width: '100%', paddingLeft: '36px', paddingRight: '36px' }}
                 />
                 <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--color-text-muted)' }} />

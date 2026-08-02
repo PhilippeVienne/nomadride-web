@@ -3,10 +3,12 @@ import { CollectionConfig } from 'payload';
 export const OsmQueries: CollectionConfig = {
   slug: 'osm-queries',
   access: {
+    // Shared, non-sensitive cache: safe to read publicly, but only the
+    // server-side Local API (which bypasses access control) should write.
     read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    create: () => false,
+    update: () => false,
+    delete: () => false,
   },
   fields: [
     {

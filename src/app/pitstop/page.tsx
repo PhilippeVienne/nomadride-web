@@ -1,25 +1,12 @@
 import { getPayload } from 'payload';
 import config from '../../../payload.config';
 import PitstopClient from '@/components/PitstopClient';
-import { auth0 } from '@/lib/auth0';
+import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
 
 export const revalidate = 0;
 
 export default async function PitstopPage() {
-  // Auth0 session
-  let auth0Id: string | undefined;
-  let auth0Email: string | undefined;
-  try {
-    const session = await auth0.getSession();
-    auth0Id = session?.user?.sub;
-    auth0Email = session?.user?.email;
-  } catch (e) {
-    console.warn('Auth0 not fully configured or no active session. Using local development fallback.');
-  }
-
-  if (!auth0Id) {
-    auth0Id = 'auth0|default_local_user_95';
-  }
+  const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
 
   let trips: any[] = [];
   let serializableUser = {
@@ -27,7 +14,7 @@ export default async function PitstopPage() {
     geoRideEmail: undefined as string | undefined,
     lastSyncDate: undefined as string | undefined,
     auth0Id,
-    isAuthenticated: auth0Id !== 'auth0|default_local_user_95',
+    isAuthenticated,
     selectedFuel: 'sp95' as any,
     searchRadius: 20,
     fillSize: 15,
@@ -41,49 +28,8 @@ export default async function PitstopPage() {
   try {
     const payload = await getPayload({ config });
 
-    // Fetch user record
-    const userResult = await payload.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-      limit: 1,
-    });
-
-    let user = userResult.docs[0];
-    const envEmail = process.env.GEORIDE_EMAIL;
-    const envPassword = process.env.GEORIDE_PASSWORD;
-
-    if (!user) {
-      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-      const userEmail = auth0Email || `motard_${sanitizedAuth0Id}@example.com`;
-
-      user = await payload.create({
-        collection: 'users',
-        data: {
-          email: userEmail,
-          password: 'admin_password_95',
-          auth0Id,
-          geoRideEmail: envEmail || userEmail,
-          geoRidePassword: envPassword || 'motard_secret_password_95',
-          trackingStartDate: process.env.GEORIDE_START_DATE
-            ? new Date(process.env.GEORIDE_START_DATE).toISOString()
-            : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      });
-    } else if (envEmail && envPassword && user.geoRideEmail !== envEmail) {
-      user = await payload.update({
-        collection: 'users',
-        id: user.id,
-        data: {
-          geoRideEmail: envEmail,
-          geoRidePassword: envPassword,
-          lastSyncDate: null,
-        },
-      });
-    }
+    // Fetch or provision the user record
+    const user = await getOrCreateUser(payload, auth0Id, auth0Email);
 
     // Fetch trips for trip shortcut feature
     const tripsResult = await payload.find({
@@ -114,7 +60,7 @@ export default async function PitstopPage() {
       geoRideEmail: user.geoRideEmail || undefined,
       lastSyncDate: user.lastSyncDate || undefined,
       auth0Id: user.auth0Id || auth0Id,
-      isAuthenticated: auth0Id !== 'auth0|default_local_user_95',
+      isAuthenticated,
       selectedFuel: (user.selectedFuel || 'sp95') as any,
       searchRadius: user.searchRadius || 20,
       fillSize: user.fillSize || 15,

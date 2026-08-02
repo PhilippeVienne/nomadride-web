@@ -1,41 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { auth0 } from '../../../../lib/auth0';
+import { findUserByAuth0Id, resolveAuth0Session } from '../../../../lib/getSessionUser';
 
 export async function DELETE(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4)
-    let auth0Id: string | undefined;
-    try {
-      const session = await auth0.getSession(request);
-      auth0Id = session?.user?.sub;
-    } catch (e) {
-      console.warn("Auth0 not fully configured or no active session in trips delete endpoint.");
-    }
-
-    // Fallback for local testing/development
-    if (!auth0Id) {
-      const url = new URL(request.url);
-      auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-    }
-
-    if (!auth0Id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    // 1. Get user session (Auth0 v4, with local-dev fallback)
+    const { auth0Id } = await resolveAuth0Session(request);
 
     // 2. Fetch user record from Payload database
-    const userResult = await payloadInstance.find({
-      collection: 'users',
-      where: {
-        auth0Id: {
-          equals: auth0Id,
-        },
-      },
-      limit: 1,
-    });
+    const userResult = await findUserByAuth0Id(payloadInstance, auth0Id);
 
     const user = userResult.docs[0];
     if (!user) {

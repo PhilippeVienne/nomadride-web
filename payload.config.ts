@@ -5,6 +5,7 @@ import { buildConfig } from 'payload';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 
+import { getPayloadSecret } from './src/utils/crypto';
 import { Users } from './src/collections/Users';
 import { Trips } from './src/collections/Trips';
 import { FuelStations } from './src/collections/FuelStations';
@@ -59,7 +60,7 @@ export default buildConfig({
   },
   collections: [Users, Trips, FuelStations, OsmStations, OsmQueries],
   editor: lexicalEditor({}),
-  secret: process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95',
+  secret: getPayloadSecret(),
   db: postgresAdapter({
     pool: {
       connectionString: getDbConnectionString(),
