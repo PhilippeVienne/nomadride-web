@@ -1,5 +1,5 @@
 import { CollectionConfig } from 'payload';
-import { encrypt, isEncrypted } from '../utils/crypto';
+import { encrypt, isEncrypted, getPayloadSecret } from '../utils/crypto';
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -8,10 +8,15 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
   },
   access: {
-    read: () => true,
-    create: () => true,
-    update: () => true,
-    delete: () => true,
+    // Every user record (including the encrypted GeoRide credentials) may
+    // only be read/edited by the account it belongs to. Provisioning and
+    // sync happen server-side via the Payload Local API, which bypasses
+    // access control, so this only restricts the public REST/GraphQL API
+    // and the admin panel.
+    read: ({ req }) => (req.user ? { id: { equals: req.user.id } } : false),
+    create: () => false,
+    update: ({ req }) => (req.user ? { id: { equals: req.user.id } } : false),
+    delete: () => false,
   },
   fields: [
     {
@@ -32,8 +37,7 @@ export const Users: CollectionConfig = {
         beforeChange: [
           ({ value }) => {
             if (value && !isEncrypted(value)) {
-              const secret = process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95';
-              return encrypt(value, secret);
+              return encrypt(value, getPayloadSecret());
             }
             return value;
           },

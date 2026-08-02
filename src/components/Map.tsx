@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FuelType, PitStopResponse } from '../lib/pitstop/types';
+import SeamlessTileLayer from './SeamlessTileLayer';
 
 // Fix Leaflet default marker icons breaking in webpack/nextjs builds
 if (typeof window !== 'undefined') {
@@ -214,7 +215,7 @@ export default function Map({
         style={{ height: '100%', width: '100%', background: '#1e293b' }}
         scrollWheelZoom={true}
       >
-        <TileLayer
+        <SeamlessTileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />

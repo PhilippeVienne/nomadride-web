@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../payload.config';
-import { decrypt } from '../../../utils/crypto';
-import { auth0 } from '../../../lib/auth0';
+import { decrypt, getPayloadSecret } from '../../../utils/crypto';
+import { getOrCreateUser, resolveAuth0Session } from '../../../lib/getSessionUser';
 
 // A set of pre-defined realistic routes in France for the mock generator
 const MOCK_ROUTES = [
@@ -65,74 +65,11 @@ export async function POST(request: NextRequest) {
         send({ step: 'init', message: 'Initialisation de la synchronisation...' });
         const payloadInstance = await getPayload({ config });
 
-        // 1. Get user session (Auth0 v4)
-        let auth0Id: string | undefined;
-        let auth0Email: string | undefined;
-        try {
-          const session = await auth0.getSession(request);
-          auth0Id = session?.user?.sub;
-          auth0Email = session?.user?.email;
-        } catch (e) {
-          console.warn("Auth0 not fully configured or no active session. Falling back to local development check.");
-        }
-
-        // fallback for local testing/development:
-        if (!auth0Id) {
-          const url = new URL(request.url);
-          auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-        }
-
-        if (!auth0Id) {
-          send({ error: 'Non autorisé' });
-          controller.close();
-          return;
-        }
+        // 1. Get user session (Auth0 v4, with local-dev fallback)
+        const { auth0Id, auth0Email } = await resolveAuth0Session(request);
 
         // 2. Fetch or create the local user record in Payload
-        const userResult = await payloadInstance.find({
-          collection: 'users',
-          where: {
-            auth0Id: {
-              equals: auth0Id,
-            },
-          },
-          limit: 1,
-        });
-
-        let user = userResult.docs[0];
-        const envEmail = process.env.GEORIDE_EMAIL;
-        const envPassword = process.env.GEORIDE_PASSWORD;
-
-        if (!user) {
-          const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-          const userEmail = auth0Email || `motard_${sanitizedAuth0Id}@example.com`;
-
-          // Create user record with mock defaults
-          user = await payloadInstance.create({
-            collection: 'users',
-            data: {
-              email: userEmail,
-              password: 'admin_password_95', // Admin login password
-              auth0Id,
-              geoRideEmail: envEmail || userEmail,
-              geoRidePassword: envPassword || 'motard_secret_password_95', // Encrypted automatically via hook
-              trackingStartDate: process.env.GEORIDE_START_DATE
-                ? new Date(process.env.GEORIDE_START_DATE).toISOString()
-                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-            },
-          });
-        } else if (envEmail && envPassword && user.geoRideEmail !== envEmail) {
-          // Dynamically update credentials if modified in env files
-          user = await payloadInstance.update({
-            collection: 'users',
-            id: user.id,
-            data: {
-              geoRideEmail: envEmail,
-              geoRidePassword: envPassword,
-              lastSyncDate: null, // Reset sync date to pull new history
-            },
-          });
-        }
+        const user = await getOrCreateUser(payloadInstance, auth0Id, auth0Email);
 
         // 3. Compute sync period
         const now = new Date();
@@ -301,8 +238,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Decrypt password
-          const secret = process.env.PAYLOAD_SECRET || 'a_very_secure_local_secret_key_for_payload_development_95';
-          const decryptedPassword = decrypt(user.geoRidePassword, secret);
+          const decryptedPassword = decrypt(user.geoRidePassword, getPayloadSecret());
 
           // 1. Authenticate with GeoRide
           send({ step: 'auth', message: 'Connexion aux serveurs GeoRide...' });

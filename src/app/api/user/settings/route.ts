@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { auth0 } from '../../../../lib/auth0';
-import { ensurePayloadSchema } from '../../../../lib/ensureSchema';
+import { findUserByAuth0Id, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { generateRandomPassword } from '../../../../utils/crypto';
 
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4)
-    let auth0Id: string | undefined;
-    try {
-      const session = await auth0.getSession(request);
-      auth0Id = session?.user?.sub;
-    } catch (e) {
-      console.warn("Auth0 not fully configured or no active session in user settings endpoint.");
-    }
-
-    // Fallback for local testing/development
-    if (!auth0Id) {
-      const url = new URL(request.url);
-      auth0Id = url.searchParams.get('userId') || 'auth0|default_local_user_95';
-    }
-
-    if (!auth0Id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+    // 1. Get user session (Auth0 v4, with local-dev fallback)
+    const { auth0Id } = await resolveAuth0Session(request);
 
     // Parse request body safely
     let body: any = {};
@@ -37,51 +21,26 @@ export async function POST(request: NextRequest) {
 
     const { geoRideEmail, geoRidePassword, trackingStartDate, selectedTrackers } = body;
 
-    // 2. Fetch user record in Payload (Auto-create schema if tables missing)
-    let userResult;
-    try {
-      userResult = await payloadInstance.find({
-        collection: 'users',
-        where: {
-          auth0Id: {
-            equals: auth0Id,
-          },
-        },
-        limit: 1,
-      });
-    } catch (err: any) {
-      if (err?.cause?.code === '42P01' || String(err?.message).includes('users') || String(err).includes('42P01')) {
-        console.log('[Payload DB Init] Relation "users" missing in PostgreSQL (code 42P01). Creating database tables via ensurePayloadSchema...');
-        await ensurePayloadSchema(payloadInstance);
-        userResult = await payloadInstance.find({
-          collection: 'users',
-          where: {
-            auth0Id: {
-              equals: auth0Id,
-            },
-          },
-          limit: 1,
-        });
-      } else {
-        throw err;
-      }
-    }
+    // 2. Fetch user record in Payload (auto-creates schema if tables missing)
+    const userResult = await findUserByAuth0Id(payloadInstance, auth0Id);
 
     let user = userResult.docs[0];
     if (!user) {
       const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@')) 
-        ? geoRideEmail.trim() 
+      const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@'))
+        ? geoRideEmail.trim()
         : `motard_${sanitizedAuth0Id}@example.com`;
 
       user = await payloadInstance.create({
         collection: 'users',
         data: {
           email: userEmail,
-          password: 'admin_password_95',
+          // Payload requires a password for this auth-enabled collection, but
+          // it's never used to log in directly (Auth0 handles authentication).
+          password: generateRandomPassword(),
           auth0Id,
           geoRideEmail: (geoRideEmail && typeof geoRideEmail === 'string') ? geoRideEmail.trim() : userEmail,
-          geoRidePassword: (geoRidePassword && typeof geoRidePassword === 'string') ? geoRidePassword : 'motard_secret_password_95',
+          geoRidePassword: (geoRidePassword && typeof geoRidePassword === 'string') ? geoRidePassword : undefined,
           trackingStartDate: (trackingStartDate && !isNaN(new Date(trackingStartDate).getTime()))
             ? new Date(trackingStartDate).toISOString()
             : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
