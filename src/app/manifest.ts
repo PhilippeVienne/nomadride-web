@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'GeoRide Rider Map',
-    short_name: 'Rider Map',
-    description: 'Carte interactive de vos trajets et stations service GeoRide',
+    name: 'NomadRide',
+    short_name: 'NomadRide',
+    description: 'Carte interactive de vos trajets et stations service',
     start_url: '/',
     display: 'standalone',
     background_color: '#0b0f19',

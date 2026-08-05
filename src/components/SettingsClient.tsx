@@ -181,7 +181,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
       <header className="navbar">
         <div className="navbar-brand">
           <Bike size={24} style={{ fill: 'currentColor' }} />
-          <span>GeoRide Rider Map - Réglages</span>
+          <span>NomadRide - Réglages</span>
         </div>
 
         <div className="navbar-actions">
