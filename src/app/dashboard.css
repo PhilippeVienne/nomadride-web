@@ -322,6 +322,12 @@
   display: flex;
 }
 
+/* Settings page compact mobile header: hidden on desktop, shown <768px
+   instead of navbar-actions--desktop (Settings has no burger/drawer). */
+.navbar-actions--settings-mobile {
+  display: none;
+}
+
 /* Burger button: hidden on desktop */
 .navbar-burger {
   display: none;
@@ -1391,6 +1397,11 @@
     display: none;
   }
   .navbar-burger {
+    display: flex;
+  }
+
+  /* Settings page: compact back button instead of the full desktop bar */
+  .navbar-actions--settings-mobile {
     display: flex;
   }
 

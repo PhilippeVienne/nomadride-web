@@ -184,7 +184,8 @@ export default function SettingsClient({ user }: SettingsClientProps) {
           <span>NomadRide - Réglages</span>
         </div>
 
-        <div className="navbar-actions">
+        {/* Desktop: full status + back button */}
+        <div className="navbar-actions navbar-actions--desktop">
           <div className="auth-status-container">
             {user.isAuthenticated ? (
               <span className="auth-badge authenticated">Auth0 Connecté</span>
@@ -199,6 +200,17 @@ export default function SettingsClient({ user }: SettingsClientProps) {
               <ArrowLeft size={14} /> {user.isAuthenticated ? 'Retour au Dashboard' : 'Retour au Pit-Stop'}
             </button>
           </div>
+        </div>
+
+        {/* Mobile: compact back button only, no room for the full status bar */}
+        <div className="navbar-actions navbar-actions--settings-mobile">
+          <button
+            className="btn-back-dashboard"
+            onClick={() => router.push(user.isAuthenticated ? '/' : '/pitstop')}
+            aria-label={user.isAuthenticated ? 'Retour au Dashboard' : 'Retour au Pit-Stop'}
+          >
+            <ArrowLeft size={16} />
+          </button>
         </div>
       </header>
 

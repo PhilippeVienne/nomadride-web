@@ -1,4 +1,5 @@
 import { getPayload } from 'payload';
+import { redirect } from 'next/navigation';
 import config from '../../../payload.config';
 import SettingsClient from '@/components/SettingsClient';
 import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
@@ -7,6 +8,11 @@ export const revalidate = 0; // Disable caching for user configuration updates
 
 export default async function SettingsPage() {
   const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
+
+  // Credentials GeoRide + trackers n'ont pas de sens pour un compte invité.
+  if (!isAuthenticated) {
+    redirect('/pitstop');
+  }
 
   let serializableUser = {
     id: '0',
