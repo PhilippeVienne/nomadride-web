@@ -162,7 +162,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
       <header className="navbar">
         <div className="navbar-brand">
           <Bike size={24} style={{ fill: 'currentColor' }} />
-          <span>GeoRide Rider Map</span>
+          <span>NomadRide</span>
         </div>
 
         {/* Desktop nav actions */}

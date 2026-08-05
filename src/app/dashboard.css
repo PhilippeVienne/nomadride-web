@@ -290,6 +290,12 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
+/* Mobile-only floating shortcuts over the map (hidden on desktop/tablet) */
+.map-locate-fab,
+.map-results-fab {
+  display: none;
+}
+
 /* Spinner micro-animation */
 .spinner {
   animation: spin 1s linear infinite;
@@ -1410,6 +1416,50 @@
   }
   .pitstop-settings-header {
     display: flex;
+  }
+
+  /* Floating "locate me" button, bottom-right above the map */
+  .map-locate-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 900;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+  .map-locate-fab:disabled {
+    opacity: 0.7;
+  }
+
+  /* Floating pill to reopen the drawer / see results without the bottom nav */
+  .map-results-fab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(11, 15, 25, 0.9);
+    backdrop-filter: blur(8px);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
   }
 }
 

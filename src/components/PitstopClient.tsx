@@ -244,13 +244,26 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
     );
   };
 
+  // First mobile visit (no saved location yet): prompt for GPS and center the
+  // map on it right away, with SP98/10km as the quick-start defaults instead
+  // of the desktop ones — on a phone the rider wants the nearest options fast.
+  useEffect(() => {
+    if (window.innerWidth > 767 || searchCenter) return;
+
+    if (!user.selectedFuel) setSelectedFuel('sp98');
+    if (!user.searchRadius) setRadius(10);
+
+    handleGeolocate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="dashboard-container">
       {/* Top Navbar */}
       <header className="navbar">
         <div className="navbar-brand">
           <Bike size={24} style={{ fill: 'currentColor' }} />
-          <span>GeoRide Rider Map</span>
+          <span>NomadRide</span>
         </div>
 
         {/* Desktop nav actions */}
@@ -314,12 +327,14 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
 
           {/* Navigation Tabs */}
           <div className="sidebar-tabs">
-            <div
-              className="sidebar-tab"
-              onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
-            >
-              🧭 Mon Historique
-            </div>
+            {user.isAuthenticated && (
+              <div
+                className="sidebar-tab"
+                onClick={() => { router.push('/'); setIsMobileMenuOpen(false); }}
+              >
+                🧭 Mon Historique
+              </div>
+            )}
             <div className="sidebar-tab active">
               ⛽ Pit-Stop
             </div>
@@ -584,6 +599,27 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               onStationSelect={setActiveStationId}
               fitAllTripsTrigger={0}
             />
+
+            {/* Mobile-only quick access: locate + open results without the drawer */}
+            <button
+              type="button"
+              className="map-locate-fab"
+              onClick={handleGeolocate}
+              disabled={isLocating}
+              aria-label="Utiliser ma position actuelle"
+            >
+              <Navigation size={18} className={isLocating ? 'spinner' : ''} style={{ transform: isLocating ? 'none' : 'rotate(45deg)' }} />
+            </button>
+
+            <button
+              type="button"
+              className="map-results-fab"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Voir les stations et réglages"
+            >
+              <Sliders size={16} />
+              <span>{stations.length > 0 ? `${stations.length} stations` : 'Réglages'}</span>
+            </button>
           </div>
         </section>
 
@@ -591,13 +627,15 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
 
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
-        <button
-          className="mobile-bottom-nav-item"
-          onClick={() => router.push('/')}
-        >
-          <span className="mobile-nav-icon">🧭</span>
-          <span>Historique</span>
-        </button>
+        {user.isAuthenticated && (
+          <button
+            className="mobile-bottom-nav-item"
+            onClick={() => router.push('/')}
+          >
+            <span className="mobile-nav-icon">🧭</span>
+            <span>Historique</span>
+          </button>
+        )}
         <button
           className="mobile-bottom-nav-item active"
           onClick={() => setIsMobileMenuOpen(true)}
