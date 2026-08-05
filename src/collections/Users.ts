@@ -61,12 +61,13 @@ export const Users: CollectionConfig = {
         { label: 'E10', value: 'e10' },
         { label: 'Gazole', value: 'gazole' },
       ],
-      defaultValue: 'sp95',
+      // No defaultValue: an unset field lets PitstopClient tell "never chosen"
+      // apart from "explicitly sp95", which drives the mobile SP98 quick-start default.
     },
     {
       name: 'searchRadius',
       type: 'number',
-      defaultValue: 20,
+      // No defaultValue: same reasoning as selectedFuel, for the mobile 10km quick-start default.
     },
     {
       name: 'fillSize',
