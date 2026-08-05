@@ -33,7 +33,9 @@ export default function SeamlessTileLayer({
       map.attributionControl.addAttribution(attribution);
     }
 
-    const canvas = L.DomUtil.create('canvas', 'seamless-tile-canvas') as HTMLCanvasElement;
+    // leaflet-zoom-animated gives the canvas the transform-origin: 0 0 and the
+    // CSS transition Leaflet's own layers rely on to animate smoothly during zoom.
+    const canvas = L.DomUtil.create('canvas', 'seamless-tile-canvas leaflet-zoom-animated') as HTMLCanvasElement;
     const context = canvas.getContext('2d');
     if (!context) return;
     const ctx = context;
@@ -51,6 +53,11 @@ export default function SeamlessTileLayer({
     // canvas) via CSS transform during drag, so no redraw is needed mid-pan.
     const BUFFER = 1.5;
     let redrawScheduled = false;
+    // Origin/zoom the canvas was last drawn at, used to keep it in sync with
+    // Leaflet's CSS zoom animation (see onZoomAnim below) the same way
+    // GridLayer._setZoomTransform does internally.
+    let drawnOrigin = map.getPixelOrigin();
+    let drawnZoom = map.getZoom();
 
     function getTileUrl(x: number, y: number, z: number) {
       const s = subdomains[Math.abs(x + y) % subdomains.length];
@@ -92,6 +99,8 @@ export default function SeamlessTileLayer({
       L.DomUtil.setPosition(canvas, nwPoint);
 
       const topLeftMapPoint = nwPoint.add(map.getPixelOrigin());
+      drawnOrigin = topLeftMapPoint;
+      drawnZoom = zoom;
 
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -120,9 +129,25 @@ export default function SeamlessTileLayer({
       requestAnimationFrame(draw);
     }
 
+    // Leaflet only CSS-animates layers that reposition/rescale themselves on
+    // 'zoomanim' (this is how its own tile layer and markers stay in sync
+    // during a zoom gesture) — without this handler the canvas sits frozen
+    // until 'zoomend', which reads as "the map doesn't zoom" even though
+    // markers (which do handle 'zoomanim') move immediately.
+    function onZoomAnim(e: L.ZoomAnimEvent) {
+      const scale = map.getZoomScale(e.zoom, drawnZoom);
+      // _getNewPixelOrigin is undocumented/private but is exactly what
+      // GridLayer._setZoomTransform uses internally for the same purpose.
+      const newOrigin = (map as unknown as { _getNewPixelOrigin: (center: L.LatLng, zoom: number) => L.Point })
+        ._getNewPixelOrigin(e.center, e.zoom);
+      const translate = drawnOrigin.multiplyBy(scale).subtract(newOrigin).round();
+      L.DomUtil.setTransform(canvas, translate, scale);
+    }
+
     map.on('moveend', scheduleRedraw);
     map.on('resize', scheduleRedraw);
     map.on('zoomend', scheduleRedraw);
+    map.on('zoomanim', onZoomAnim);
 
     draw();
 
@@ -130,6 +155,7 @@ export default function SeamlessTileLayer({
       map.off('moveend', scheduleRedraw);
       map.off('resize', scheduleRedraw);
       map.off('zoomend', scheduleRedraw);
+      map.off('zoomanim', onZoomAnim);
       if (attribution) {
         map.attributionControl.removeAttribution(attribution);
       }

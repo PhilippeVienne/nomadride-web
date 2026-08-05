@@ -14,6 +14,7 @@ import {
   Sliders,
   Menu,
   X,
+  LogIn,
 } from 'lucide-react';
 import '../app/dashboard.css';
 import { FuelType, PitStopResponse } from '../lib/pitstop/types';
@@ -643,13 +644,20 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           <span className="mobile-nav-icon">⛽</span>
           <span>Pit-Stop</span>
         </button>
-        <button
-          className="mobile-bottom-nav-item"
-          onClick={() => router.push('/settings')}
-        >
-          <span className="mobile-nav-icon">⚙️</span>
-          <span>Réglages</span>
-        </button>
+        {user.isAuthenticated ? (
+          <button
+            className="mobile-bottom-nav-item"
+            onClick={() => router.push('/settings')}
+          >
+            <span className="mobile-nav-icon">⚙️</span>
+            <span>Réglages</span>
+          </button>
+        ) : (
+          <a className="mobile-bottom-nav-item" href="/auth/login">
+            <LogIn size={18} className="mobile-nav-icon" />
+            <span>Se connecter</span>
+          </a>
+        )}
       </nav>
 
     </div>
