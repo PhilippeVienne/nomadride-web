@@ -403,6 +403,16 @@ export default function SettingsClient({ user }: SettingsClientProps) {
               </div>
             )}
           </div>
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <button
+              type="button"
+              className="btn-creds-edit"
+              onClick={() => router.push('/about')}
+            >
+              À propos, mentions légales &amp; RGPD
+            </button>
+          </div>
         </div>
       </main>
 

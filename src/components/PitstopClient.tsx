@@ -581,6 +581,15 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               )}
             </div>
           </div>
+
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <a
+              href="/about"
+              style={{ fontSize: '11px', color: 'var(--color-text-muted)', textDecoration: 'underline' }}
+            >
+              À propos, mentions légales &amp; RGPD
+            </a>
+          </div>
         </section>
 
         {/* Right Map Panel */}
