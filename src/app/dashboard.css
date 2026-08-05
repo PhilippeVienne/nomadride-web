@@ -1410,6 +1410,13 @@
     display: flex;
   }
 
+  /* Settings has no drawer (unlike .sidebar, which already reserves this
+     space via bottom: 60px): without this, its last ~76px of content sits
+     behind the fixed bottom nav and can never be scrolled into view. */
+  .settings-layout {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
   /* Adjust list heights for drawer */
   .station-list {
     max-height: 40vh;
