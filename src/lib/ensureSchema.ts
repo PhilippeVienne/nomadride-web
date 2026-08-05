@@ -30,6 +30,13 @@ export async function ensurePayloadSchema(payload: any) {
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
 
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_password_token" varchar;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "reset_password_expiration" timestamp with time zone;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "salt" varchar;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hash" varchar;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "login_attempts" numeric DEFAULT 0;
+      ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lock_until" timestamp with time zone;
+
       CREATE TABLE IF NOT EXISTS "users_selected_trackers" (
         "id" serial PRIMARY KEY,
         "_order" integer NOT NULL,

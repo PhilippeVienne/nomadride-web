@@ -54,10 +54,17 @@ export async function findUserByAuth0Id(payload: Payload, auth0Id: string) {
   try {
     return await findUser();
   } catch (err: any) {
-    const isMissingTable = err?.cause?.code === '42P01' || String(err?.message).includes('42P01');
-    if (!isMissingTable) throw err;
+    // 42P01 = relation (table) does not exist, 42703 = column does not exist.
+    // Both indicate a schema drift that ensurePayloadSchema can self-heal.
+    const code = err?.cause?.code;
+    const isSchemaDrift =
+      code === '42P01' ||
+      code === '42703' ||
+      String(err?.message).includes('42P01') ||
+      String(err?.message).includes('42703');
+    if (!isSchemaDrift) throw err;
 
-    console.log('[Payload DB Init] Relation missing (42P01). Creating tables via ensurePayloadSchema...');
+    console.log(`[Payload DB Init] Schema drift detected (${code}). Creating/updating tables via ensurePayloadSchema...`);
     await ensurePayloadSchema(payload);
     return await findUser();
   }
