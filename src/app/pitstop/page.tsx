@@ -2,6 +2,7 @@ import { getPayload } from 'payload';
 import config from '../../../payload.config';
 import PitstopClient from '@/components/PitstopClient';
 import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
+import type { FuelType } from '@/lib/pitstop/types';
 
 export const revalidate = 0;
 
@@ -15,8 +16,8 @@ export default async function PitstopPage() {
     lastSyncDate: undefined as string | undefined,
     auth0Id,
     isAuthenticated,
-    selectedFuel: 'sp95' as any,
-    searchRadius: 20,
+    selectedFuel: undefined as FuelType | undefined,
+    searchRadius: undefined as number | undefined,
     fillSize: 15,
     consumption: 5.0,
     excludeDistance: false,
@@ -61,8 +62,8 @@ export default async function PitstopPage() {
       lastSyncDate: user.lastSyncDate || undefined,
       auth0Id: user.auth0Id || auth0Id,
       isAuthenticated,
-      selectedFuel: (user.selectedFuel || 'sp95') as any,
-      searchRadius: user.searchRadius || 20,
+      selectedFuel: (user.selectedFuel ?? undefined) as FuelType | undefined,
+      searchRadius: user.searchRadius ?? undefined,
       fillSize: user.fillSize || 15,
       consumption: user.consumption || 5.0,
       excludeDistance: !!user.excludeDistance,
