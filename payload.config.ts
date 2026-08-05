@@ -11,6 +11,7 @@ import { Trips } from './src/collections/Trips';
 import { FuelStations } from './src/collections/FuelStations';
 import { OsmStations } from './src/collections/OsmStations';
 import { OsmQueries } from './src/collections/OsmQueries';
+import { ensurePayloadSchema } from './src/lib/ensureSchema';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -57,6 +58,13 @@ console.log(`[Payload DB SSL Config] isProd: ${isProd} | hasPostgresCa: ${hasCa}
 export default buildConfig({
   admin: {
     user: 'users',
+  },
+  // `push: true` (below) only syncs schema in development — in production
+  // (this project has no migrations set up) it's a no-op, so tables/columns
+  // must be created/patched here proactively at startup instead of relying
+  // on reactive error handling scattered across route handlers.
+  onInit: async (payload) => {
+    await ensurePayloadSchema(payload);
   },
   collections: [Users, Trips, FuelStations, OsmStations, OsmQueries],
   editor: lexicalEditor({}),

@@ -118,6 +118,27 @@ export async function ensurePayloadSchema(payload: any) {
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS "payload_locked_documents_rels" (
+        "id" serial PRIMARY KEY,
+        "order" integer,
+        "parent_id" integer NOT NULL REFERENCES "payload_locked_documents"("id") ON DELETE CASCADE,
+        "path" varchar NOT NULL,
+        "users_id" integer REFERENCES "users"("id") ON DELETE CASCADE,
+        "trips_id" integer REFERENCES "trips"("id") ON DELETE CASCADE,
+        "fuel_stations_id" integer REFERENCES "fuel_stations"("id") ON DELETE CASCADE,
+        "osm_stations_id" integer REFERENCES "osm_stations"("id") ON DELETE CASCADE,
+        "osm_queries_id" integer REFERENCES "osm_queries"("id") ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_order_idx" ON "payload_locked_documents_rels" ("order");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_parent_idx" ON "payload_locked_documents_rels" ("parent_id");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_path_idx" ON "payload_locked_documents_rels" ("path");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_users_id_idx" ON "payload_locked_documents_rels" ("users_id");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_trips_id_idx" ON "payload_locked_documents_rels" ("trips_id");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_fuel_stations_id_idx" ON "payload_locked_documents_rels" ("fuel_stations_id");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_osm_stations_id_idx" ON "payload_locked_documents_rels" ("osm_stations_id");
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_osm_queries_id_idx" ON "payload_locked_documents_rels" ("osm_queries_id");
+
       CREATE TABLE IF NOT EXISTS "payload_preferences" (
         "id" serial PRIMARY KEY,
         "key" varchar,
@@ -125,6 +146,19 @@ export async function ensurePayloadSchema(payload: any) {
         "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS "payload_preferences_rels" (
+        "id" serial PRIMARY KEY,
+        "order" integer,
+        "parent_id" integer NOT NULL REFERENCES "payload_preferences"("id") ON DELETE CASCADE,
+        "path" varchar NOT NULL,
+        "users_id" integer REFERENCES "users"("id") ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS "payload_preferences_rels_order_idx" ON "payload_preferences_rels" ("order");
+      CREATE INDEX IF NOT EXISTS "payload_preferences_rels_parent_idx" ON "payload_preferences_rels" ("parent_id");
+      CREATE INDEX IF NOT EXISTS "payload_preferences_rels_path_idx" ON "payload_preferences_rels" ("path");
+      CREATE INDEX IF NOT EXISTS "payload_preferences_rels_users_id_idx" ON "payload_preferences_rels" ("users_id");
     `;
 
     await pool.query(createTablesSQL);
