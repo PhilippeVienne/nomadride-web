@@ -244,6 +244,19 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
     );
   };
 
+  // First mobile visit (no saved location yet): prompt for GPS and center the
+  // map on it right away, with SP98/10km as the quick-start defaults instead
+  // of the desktop ones — on a phone the rider wants the nearest options fast.
+  useEffect(() => {
+    if (window.innerWidth > 767 || searchCenter) return;
+
+    if (!user.selectedFuel) setSelectedFuel('sp98');
+    if (!user.searchRadius) setRadius(10);
+
+    handleGeolocate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="dashboard-container">
       {/* Top Navbar */}
@@ -586,6 +599,27 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               onStationSelect={setActiveStationId}
               fitAllTripsTrigger={0}
             />
+
+            {/* Mobile-only quick access: locate + open results without the drawer */}
+            <button
+              type="button"
+              className="map-locate-fab"
+              onClick={handleGeolocate}
+              disabled={isLocating}
+              aria-label="Utiliser ma position actuelle"
+            >
+              <Navigation size={18} className={isLocating ? 'spinner' : ''} style={{ transform: isLocating ? 'none' : 'rotate(45deg)' }} />
+            </button>
+
+            <button
+              type="button"
+              className="map-results-fab"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Voir les stations et réglages"
+            >
+              <Sliders size={16} />
+              <span>{stations.length > 0 ? `${stations.length} stations` : 'Réglages'}</span>
+            </button>
           </div>
         </section>
 
