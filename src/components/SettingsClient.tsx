@@ -181,7 +181,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
       <header className="navbar">
         <div className="navbar-brand">
           <Bike size={24} style={{ fill: 'currentColor' }} />
-          <span>GeoRide Rider Map - Réglages</span>
+          <span>NomadRide - Réglages</span>
         </div>
 
         <div className="navbar-actions">
@@ -192,11 +192,11 @@ export default function SettingsClient({ user }: SettingsClientProps) {
               <span className="auth-badge guest">Mode Invité (Dev)</span>
             )}
             <span style={{ color: 'var(--color-text-muted)' }}>|</span>
-            <button 
-              className="btn-back-dashboard" 
-              onClick={() => router.push('/')}
+            <button
+              className="btn-back-dashboard"
+              onClick={() => router.push(user.isAuthenticated ? '/' : '/pitstop')}
             >
-              <ArrowLeft size={14} /> Retour au Dashboard
+              <ArrowLeft size={14} /> {user.isAuthenticated ? 'Retour au Dashboard' : 'Retour au Pit-Stop'}
             </button>
           </div>
         </div>
@@ -396,13 +396,15 @@ export default function SettingsClient({ user }: SettingsClientProps) {
 
       {/* Mobile Bottom Navigation */}
       <nav className="mobile-bottom-nav">
-        <button
-          className="mobile-bottom-nav-item"
-          onClick={() => router.push('/')}
-        >
-          <span className="mobile-nav-icon">🧭</span>
-          <span>Historique</span>
-        </button>
+        {user.isAuthenticated && (
+          <button
+            className="mobile-bottom-nav-item"
+            onClick={() => router.push('/')}
+          >
+            <span className="mobile-nav-icon">🧭</span>
+            <span>Historique</span>
+          </button>
+        )}
         <button
           className="mobile-bottom-nav-item"
           onClick={() => router.push('/pitstop')}
