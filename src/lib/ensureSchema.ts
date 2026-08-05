@@ -17,7 +17,6 @@ export async function ensurePayloadSchema(payload: any) {
         "geo_ride_email" varchar,
         "geo_ride_password" varchar,
         "last_sync_date" timestamp with time zone,
-        "selected_trackers" jsonb,
         "tracking_start_date" timestamp with time zone,
         "selected_fuel" varchar DEFAULT 'sp95',
         "search_radius" numeric DEFAULT 20,
@@ -30,6 +29,25 @@ export async function ensurePayloadSchema(payload: any) {
         "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS "users_selected_trackers" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "tracker_id" varchar NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS "users_selected_trackers_parent_id_idx" ON "users_selected_trackers" ("_parent_id");
+
+      CREATE TABLE IF NOT EXISTS "users_sessions" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "created_at" timestamp with time zone,
+        "expires_at" timestamp with time zone
+      );
+
+      CREATE INDEX IF NOT EXISTS "users_sessions_parent_id_idx" ON "users_sessions" ("_parent_id");
 
       CREATE TABLE IF NOT EXISTS "trips" (
         "id" serial PRIMARY KEY,
