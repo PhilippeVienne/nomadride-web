@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GeoRide Rider Map",
-  description: "Carte interactive de vos trajets et stations service GeoRide",
+  title: "NomadRide",
+  description: "Carte interactive de vos trajets et stations service",
 };
 
 export default function RootLayout({
