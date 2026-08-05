@@ -176,7 +176,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               </>
             ) : (
               <>
-                <span className="auth-badge guest">Mode Invité (Dev)</span>
+                <span className="auth-badge guest">Mode Invité</span>
                 <span style={{ color: 'var(--color-text-muted)' }}>|</span>
                 <a href="/auth/login" className="btn-auth btn-auth-login">Se connecter avec Auth0</a>
               </>

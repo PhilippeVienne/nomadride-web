@@ -189,7 +189,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
             {user.isAuthenticated ? (
               <span className="auth-badge authenticated">Auth0 Connecté</span>
             ) : (
-              <span className="auth-badge guest">Mode Invité (Dev)</span>
+              <span className="auth-badge guest">Mode Invité</span>
             )}
             <span style={{ color: 'var(--color-text-muted)' }}>|</span>
             <button
