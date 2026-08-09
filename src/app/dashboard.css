@@ -315,6 +315,89 @@
   font-weight: 700;
 }
 
+/* Trip detail panel — appears above the map when a trip is selected from
+   the history list, showing stats computed from the trip's stored data. */
+.trip-detail-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-active);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.trip-detail-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-detail-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.trip-detail-panel-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: var(--radius-sm);
+}
+
+.trip-detail-panel-close:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.trip-detail-panel-date {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-transform: capitalize;
+}
+
+.trip-detail-panel-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.trip-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.trip-detail-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-orange);
+}
+
+.trip-detail-stat-label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+@media (max-width: 640px) {
+  .trip-detail-panel-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .map-container-wrapper {
   flex: 1;
   position: relative;
@@ -1624,6 +1707,17 @@
 @keyframes slideUp {
   from {
     transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-8px);
     opacity: 0;
   }
   to {

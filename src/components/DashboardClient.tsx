@@ -71,6 +71,36 @@ interface DashboardClientProps {
   user: User;
 }
 
+/** Formats a duration in minutes as "Xh Ym" (or "Ym" under an hour). */
+function formatMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
+}
+
+/**
+ * Derives per-trip stats from the fields we actually store (distance,
+ * duration, start/end timestamps, GPS point count). Deliberately does not
+ * attempt a "max speed" — the stored path has no per-point timestamps, so
+ * any such figure would be fabricated rather than measured.
+ */
+function getTripStats(trip: Trip) {
+  const start = new Date(trip.startedAt);
+  const end = new Date(trip.endedAt);
+  const distanceKm = trip.distance || 0;
+  const durationMin = trip.duration || 0;
+  const avgSpeedKmh = durationMin > 0 ? distanceKm / (durationMin / 60) : 0;
+
+  return {
+    dateLabel: start.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+    startLabel: start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    endLabel: end.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    durationLabel: formatMinutes(durationMin),
+    avgSpeedKmh,
+    pointCount: trip.path ? trip.path.length : 0,
+  };
+}
+
 export default function DashboardClient({ initialTrips, user }: DashboardClientProps) {
   const router = useRouter();
 
@@ -96,6 +126,11 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const formattedDuration = totalHours > 0
     ? `${totalHours}h ${remainingMinutes}m`
     : `${remainingMinutes} min`;
+
+  // Selected trip's detail panel — clicking a trip both zooms the map to it
+  // (existing behavior) and now also surfaces its stats here.
+  const activeTrip = trips.find((t) => t.id === activeTripId) || null;
+  const activeTripStats = activeTrip ? getTripStats(activeTrip) : null;
 
   // Trigger sync via API Route
   const handleSync = async () => {
@@ -389,11 +424,6 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           <div className="map-view-header">
             <h2 className="map-title">🧭 Carte interactive des rides</h2>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              {activeTripId && (
-                <span style={{ fontSize: '13px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--accent-orange)', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
-                  Tracé actif zoomé
-                </span>
-              )}
               {trips.length > 0 && (
                 <button
                   type="button"
@@ -408,6 +438,44 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               )}
             </div>
           </div>
+
+          {/* Selected trip detail — appears when a trip is clicked in the list */}
+          {activeTrip && activeTripStats && (
+            <div className="trip-detail-panel">
+              <div className="trip-detail-panel-header">
+                <span className="trip-detail-panel-title">{activeTrip.title || 'Trajet Moto'}</span>
+                <button
+                  type="button"
+                  className="trip-detail-panel-close"
+                  onClick={() => setActiveTripId(null)}
+                  aria-label="Fermer le détail du trajet"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="trip-detail-panel-date">
+                {activeTripStats.dateLabel} · {activeTripStats.startLabel} → {activeTripStats.endLabel}
+              </div>
+              <div className="trip-detail-panel-stats">
+                <div className="trip-detail-stat">
+                  <span className="trip-detail-stat-value">{(activeTrip.distance || 0).toFixed(1)} km</span>
+                  <span className="trip-detail-stat-label">Distance</span>
+                </div>
+                <div className="trip-detail-stat">
+                  <span className="trip-detail-stat-value">{activeTripStats.durationLabel}</span>
+                  <span className="trip-detail-stat-label">Durée</span>
+                </div>
+                <div className="trip-detail-stat">
+                  <span className="trip-detail-stat-value">{activeTripStats.avgSpeedKmh.toFixed(0)} km/h</span>
+                  <span className="trip-detail-stat-label">Vitesse moy.</span>
+                </div>
+                <div className="trip-detail-stat">
+                  <span className="trip-detail-stat-value">{activeTripStats.pointCount}</span>
+                  <span className="trip-detail-stat-label">Points GPS</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="map-container-wrapper">
             <Map
