@@ -106,6 +106,11 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
   const [isSearchingStations, setIsSearchingStations] = useState(false);
   const [stationsError, setStationsError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  // True while the server served a cached-but-aging result and is fetching
+  // a fresher one in the background (stale-while-revalidate).
+  const [isRefreshingStale, setIsRefreshingStale] = useState(false);
+  const stationsAbortRef = useRef<AbortController | null>(null);
+  const staleRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Autocomplete
   const lastSelectedQueryRef = useRef<string | null>(user.lastSearchQuery || null);
@@ -139,8 +144,23 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
 
-  // Fetch gas stations
-  const fetchStations = async (lat: number, lon: number) => {
+  // Fetch gas stations. `isAutoRefresh` marks the single automatic follow-up
+  // fetch triggered when the server flags its response as stale — it must
+  // never itself schedule another follow-up, or a persistently failing
+  // Overpass refresh could turn into an unbounded polling loop.
+  const fetchStations = async (lat: number, lon: number, isAutoRefresh = false) => {
+    // Cancel any still-in-flight request for a previous radius/fuel/center
+    // combination — without this, rapid slider drags could pile up several
+    // concurrent requests that all reach the backend.
+    stationsAbortRef.current?.abort();
+    const controller = new AbortController();
+    stationsAbortRef.current = controller;
+
+    if (staleRefetchTimerRef.current) {
+      clearTimeout(staleRefetchTimerRef.current);
+      staleRefetchTimerRef.current = null;
+    }
+
     setIsSearchingStations(true);
     setStationsError(null);
     try {
@@ -154,14 +174,27 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
         excludeDistance: String(excludeDistance),
       });
 
-      const res = await fetch(`/api/pit-stop/stations?${params.toString()}`);
+      const res = await fetch(`/api/pit-stop/stations?${params.toString()}`, {
+        signal: controller.signal,
+      });
       if (!res.ok) {
         const errPayload = await res.json();
         throw new Error(errPayload.error || 'Erreur lors de la recherche des stations.');
       }
-      const data = (await res.json()) as PitStopResponse[];
-      setStations(data);
+      const data = (await res.json()) as { stations: PitStopResponse[]; stale: boolean };
+      setStations(data.stations);
+      setIsRefreshingStale(!!data.stale);
+
+      // The API already scheduled a background cache refresh for stale
+      // zones. Re-fetch once, a few seconds later, to pick up the fresh
+      // result automatically instead of making the user search again.
+      if (data.stale && !isAutoRefresh) {
+        staleRefetchTimerRef.current = setTimeout(() => {
+          fetchStations(lat, lon, true);
+        }, 4000);
+      }
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error(err);
       setStationsError(err.message || 'Impossible de se connecter au service des carburants.');
     } finally {
@@ -170,9 +203,17 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
   };
 
   useEffect(() => {
-    if (searchCenter) {
+    if (!searchCenter) return;
+
+    // Debounced: sliders (radius, fill size, consumption) fire onChange on
+    // every step, so without this a single drag could send a dozen requests
+    // — each one capable of triggering an Overpass lookup on a cache miss.
+    const delayDebounce = setTimeout(() => {
       fetchStations(searchCenter[0], searchCenter[1]);
-    }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchCenter, selectedFuel, radius, fillSize, consumption, excludeDistance]);
 
   // Save preferences
@@ -508,7 +549,13 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               )}
             </h3>
 
-            <div className="station-list">
+            {isRefreshingStale && !isSearchingStations && (
+              <div style={{ fontSize: '11px', color: 'var(--accent-orange)', marginBottom: '6px' }}>
+                Résultats en cache — vérification d&apos;une version plus récente...
+              </div>
+            )}
+
+            <div className={`station-list${isRefreshingStale ? ' pitstop-refreshing' : ''}`}>
               {isSearchingStations && stations.length === 0 ? (
                 <div className="empty-trips-placeholder">
                   <RefreshCw size={24} className="spinner" style={{ color: 'var(--accent-orange)' }} />
@@ -598,7 +645,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
             <h2 className="map-title">⛽ Stations-service</h2>
           </div>
 
-          <div className="map-container-wrapper">
+          <div className={`map-container-wrapper${isRefreshingStale ? ' pitstop-refreshing' : ''}`}>
             <Map
               trips={trips}
               activeTripId={activeTripId}

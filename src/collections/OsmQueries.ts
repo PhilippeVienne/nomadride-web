@@ -32,5 +32,22 @@ export const OsmQueries: CollectionConfig = {
       required: true,
       index: true,
     },
+    {
+      name: 'hitCount',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      index: true,
+      admin: {
+        description: 'Nombre de requêtes utilisateur servies depuis ce cache. Utilisé par le cron de pré-chauffe pour identifier les zones populaires.',
+      },
+    },
+    {
+      name: 'lastHitAt',
+      type: 'date',
+      admin: {
+        description: 'Dernière fois qu’une requête utilisateur a été servie depuis ce cache.',
+      },
+    },
   ],
 };

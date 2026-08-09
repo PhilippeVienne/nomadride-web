@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { getStationsAround } from '../../../../lib/pitstop/providers';
 import { FuelType } from '../../../../lib/pitstop/types';
 
@@ -49,14 +50,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Consumption must be a number between 0 and 30 L/100km.' }, { status: 400 });
     }
 
-    // 3. Fetch coordinated results
-    const stations = await getStationsAround(lat, lng, radius, fuel, {
+    // 3. Fetch coordinated results. Cache hits older than 24h are still
+    // served immediately (stale-while-revalidate) — the refresh itself
+    // happens after the response is sent, so it never adds latency to the
+    // user's request.
+    const { results, stale, revalidate } = await getStationsAround(lat, lng, radius, fuel, {
       fillSize,
       consumption,
       excludeDistance,
     });
 
-    return NextResponse.json(stations);
+    if (revalidate) {
+      after(revalidate);
+    }
+
+    return NextResponse.json({ stations: results, stale });
   } catch (error: any) {
     console.error('Error in /api/pit-stop/stations:', error);
     return NextResponse.json({ error: 'Failed to process fuel stations search.' }, { status: 500 });
