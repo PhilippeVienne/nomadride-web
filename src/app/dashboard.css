@@ -310,6 +310,21 @@
   }
 }
 
+/* Shown while cached pitstop results are displayed but a fresher version is
+   being fetched in the background (stale-while-revalidate indicator). */
+.pitstop-refreshing {
+  animation: pitstop-refreshing-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes pitstop-refreshing-blink {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.75);
+  }
+}
+
 /* Auth0 Status / Action styling */
 .navbar-actions {
   display: flex;

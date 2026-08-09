@@ -1,6 +1,6 @@
 import { BaseStation, FuelType, PitStopResponse, TripSettings } from '../types';
 import { haversineDistance } from '../utils';
-import { enrichBrands } from '../osmService';
+import { enrichBrands, StaleTracker } from '../osmService';
 import { getFrenchStations } from './france';
 import { getSpanishStations } from './spain';
 import { getGermanStations } from './germany';
@@ -84,6 +84,14 @@ export function calculateEffectiveCost(
   };
 }
 
+export interface StationsAroundResult {
+  results: PitStopResponse[];
+  /** True if any part of this response was served from a stale (>24h) cache entry. */
+  stale: boolean;
+  /** Present only when stale: refreshes every stale zone in the background (run via Next's `after()`). */
+  revalidate?: () => Promise<void>;
+}
+
 /**
  * Queries all overlapping providers, enriches brands, calculates costs and sorts the final list.
  */
@@ -93,7 +101,8 @@ export async function getStationsAround(
   radiusKm: number,
   selectedFuel: FuelType,
   settings: TripSettings
-): Promise<PitStopResponse[]> {
+): Promise<StationsAroundResult> {
+  const tracker: StaleTracker = { stale: false, revalidations: [] };
   const promises: Promise<BaseStation[]>[] = [];
 
   // Determine overlapping countries
@@ -101,7 +110,7 @@ export async function getStationsAround(
   if (overlaps(lat, lon, radiusKm, ES_BBOX)) promises.push(getSpanishStations(lat, lon, radiusKm));
   if (overlaps(lat, lon, radiusKm, DE_BBOX)) promises.push(getGermanStations(lat, lon, radiusKm));
   if (overlaps(lat, lon, radiusKm, AT_BBOX)) promises.push(getAustrianStations(lat, lon, selectedFuel, radiusKm));
-  if (overlaps(lat, lon, radiusKm, CH_BBOX)) promises.push(getSwissStations(lat, lon, radiusKm));
+  if (overlaps(lat, lon, radiusKm, CH_BBOX)) promises.push(getSwissStations(lat, lon, radiusKm, tracker));
 
   // Execute in parallel
   const settles = await Promise.allSettled(promises);
@@ -126,7 +135,7 @@ export async function getStationsAround(
   const finalStationsBase = stationsWithDistance.map((item) => item.station);
 
   // Perform Brand Enrichment via OSM Overpass API in batch
-  const enrichedStations = await enrichBrands(finalStationsBase, lat, lon, radiusKm);
+  const enrichedStations = await enrichBrands(finalStationsBase, lat, lon, radiusKm, tracker);
 
   // Calculate costs
   const results = enrichedStations.map((station) => {
@@ -156,5 +165,14 @@ export async function getStationsAround(
     return a.distanceKm - b.distanceKm;
   });
 
-  return results;
+  return {
+    results,
+    stale: tracker.stale,
+    revalidate:
+      tracker.revalidations.length > 0
+        ? async () => {
+            await Promise.all(tracker.revalidations.map((fn) => fn()));
+          }
+        : undefined,
+  };
 }

@@ -1,6 +1,5 @@
 import { BaseStation } from '../types';
-import { queryOverpass } from '../osmService';
-import { getCachedOsmStations, saveOsmQueryToCache } from '../dbCache';
+import { getFuelElementsAround, StaleTracker } from '../osmService';
 
 interface CacheEntry {
   data: BaseStation[];
@@ -9,7 +8,6 @@ interface CacheEntry {
 
 const switzerlandCache = new Map<string, CacheEntry>();
 const CACHE_TTL_30M = 30 * 60 * 1000;
-const CACHE_TTL_90D = 90 * 24 * 60 * 60 * 1000;
 const GRID_CELL_SIZE = 0.018; // approx 2 km
 
 /**
@@ -18,7 +16,8 @@ const GRID_CELL_SIZE = 0.018; // approx 2 km
 export async function getSwissStations(
   lat: number,
   lon: number,
-  radiusKm: number
+  radiusKm: number,
+  tracker?: StaleTracker
 ): Promise<BaseStation[]> {
   // 1. Manage Grid cell + radius cache key
   const cellLat = Math.floor(lat / GRID_CELL_SIZE);
@@ -30,44 +29,27 @@ export async function getSwissStations(
     return cached.data;
   }
 
-  // 2. Check Database Cache
-  let elements: any[] | null = null;
+  // 2. Resolve amenity=fuel OSM elements (shares the DB cache + in-flight
+  // Overpass de-duplication with the brand-enrichment step — see
+  // osmService.getFuelElementsAround).
+  let elements: any[];
   try {
-    elements = await getCachedOsmStations(lat, lon, radiusKm, CACHE_TTL_90D);
-  } catch (error) {
-    console.error('Error reading Swiss OSM stations from database cache:', error);
-  }
-
-  if (elements === null) {
-    // 3. Query OSM Overpass API for amenity=fuel around coordinates
-    const radiusMeters = Math.round(radiusKm * 1000);
-    const overpassQuery = `[out:json][timeout:5];
-(
-  node["amenity"="fuel"](around:${radiusMeters},${lat},${lon});
-  way["amenity"="fuel"](around:${radiusMeters},${lat},${lon});
-);
-out center tags;`;
-
-    try {
-      const response = await queryOverpass(overpassQuery);
-      elements = (response?.elements || []) as any[];
-      // Save to database cache
-      try {
-        await saveOsmQueryToCache(lat, lon, radiusKm, elements);
-      } catch (dbError) {
-        console.error('Error saving Swiss OSM query to database cache:', dbError);
-      }
-    } catch (error) {
-      console.error('Error in SwitzerlandProvider Overpass fetching:', error);
-      if (cached) {
-        console.warn('Returning stale Swiss spatial cache due to API error');
-        return cached.data;
-      }
-      return [];
+    const result = await getFuelElementsAround(lat, lon, radiusKm);
+    elements = result.elements;
+    if (tracker && result.stale) {
+      tracker.stale = true;
+      if (result.revalidate) tracker.revalidations.push(result.revalidate);
     }
+  } catch (error) {
+    console.error('Error in SwitzerlandProvider Overpass fetching:', error);
+    if (cached) {
+      console.warn('Returning stale Swiss spatial cache due to API error');
+      return cached.data;
+    }
+    return [];
   }
 
-  // 4. Map elements to simulated Swiss stations
+  // 3. Map elements to simulated Swiss stations
   const parsedStations: BaseStation[] = [];
   let stationIndex = 0;
   for (const el of elements) {

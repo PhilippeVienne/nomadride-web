@@ -23,6 +23,42 @@ function getBBox(lat: number, lon: number, radiusKm: number): BBox {
   };
 }
 
+export interface PopularZone {
+  id: string | number;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  hitCount: number;
+}
+
+/**
+ * Returns the most-requested cached zones, ranked by how many times they
+ * were served to users. Used by the daily pre-warm cron to decide which
+ * areas are worth refreshing proactively from Overpass.
+ */
+export async function getTopPopularZones(limit: number): Promise<PopularZone[]> {
+  try {
+    const payload = await getPayload({ config });
+    const result = await payload.find({
+      collection: 'osm-queries',
+      where: { hitCount: { greater_than: 0 } },
+      sort: '-hitCount',
+      limit,
+    });
+
+    return result.docs.map((doc: any) => ({
+      id: doc.id,
+      latitude: doc.latitude,
+      longitude: doc.longitude,
+      radius: doc.radius,
+      hitCount: doc.hitCount || 0,
+    }));
+  } catch (error) {
+    console.error('Error fetching popular OSM zones:', error);
+    return [];
+  }
+}
+
 /**
  * Checks the database for cached fuel stations within a bounding box.
  * Returns the stations if the cache is hit and completely fresh (within TTL).
@@ -152,40 +188,53 @@ export async function saveFuelStationsToCache(stations: BaseStation[]): Promise<
   }
 }
 
+export interface OsmCacheResult {
+  elements: any[];
+  /** Age (ms) of the freshest covering query — lets callers decide fresh vs. stale-but-usable. */
+  ageMs: number;
+  /** id of the covering osm-queries document, used to record popularity hits. */
+  queryId: string | number;
+}
+
 /**
  * Checks if a search zone is fully covered by a previously completed OSM query.
+ * Returns the freshest covering query's age so callers can implement
+ * stale-while-revalidate instead of an all-or-nothing TTL.
  */
 export async function getCachedOsmStations(
   lat: number,
   lon: number,
   radiusKm: number,
   maxAgeMs: number
-): Promise<any[] | null> {
+): Promise<OsmCacheResult | null> {
   try {
     const payload = await getPayload({ config });
 
-    // Look for a query that contains our search circle
+    // Look for queries that contain our search circle, sorted so the most
+    // recent covering query wins (gives the most accurate freshness signal).
     const queries = await payload.find({
       collection: 'osm-queries',
+      sort: '-queriedAt',
       limit: 100,
     });
 
     const now = Date.now();
-    let isCovered = false;
+    let bestMatch: { id: string | number; ageMs: number } | null = null;
 
     for (const q of queries.docs) {
       const queriedAt = new Date(q.queriedAt).getTime();
-      if (now - queriedAt > maxAgeMs) continue;
+      const ageMs = now - queriedAt;
+      if (ageMs > maxAgeMs) continue;
 
       const dist = haversineDistance(lat, lon, q.latitude, q.longitude);
       // If our search circle fits inside the cached query circle
       if (dist + radiusKm <= q.radius) {
-        isCovered = true;
-        break;
+        bestMatch = { id: q.id, ageMs };
+        break; // docs are sorted by queriedAt desc, so the first hit is freshest
       }
     }
 
-    if (!isCovered) {
+    if (!bestMatch) {
       return null;
     }
 
@@ -221,7 +270,11 @@ export async function getCachedOsmStations(
     }));
 
     // Filter by Haversine distance
-    return elements.filter((el) => haversineDistance(lat, lon, el.lat, el.lon) <= radiusKm);
+    return {
+      elements: elements.filter((el) => haversineDistance(lat, lon, el.lat, el.lon) <= radiusKm),
+      ageMs: bestMatch.ageMs,
+      queryId: bestMatch.id,
+    };
   } catch (error) {
     console.error('Error fetching cached OSM stations:', error);
     return null;
@@ -229,8 +282,84 @@ export async function getCachedOsmStations(
 }
 
 /**
- * Saves OSM stations and logs the query zone in the database.
+ * Records that a cached zone was served to a user, without blocking the
+ * caller. Feeds the popularity ranking used by the daily pre-warm cron.
+ * Fire-and-forget by design: never await this from a request path.
  */
+export async function markOsmQueryHit(queryId: string | number): Promise<void> {
+  try {
+    const payload = await getPayload({ config });
+    const current = await payload.findByID({ collection: 'osm-queries', id: queryId as any });
+    await payload.update({
+      collection: 'osm-queries',
+      id: queryId,
+      data: {
+        hitCount: (current?.hitCount || 0) + 1,
+        lastHitAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.warn('Error recording OSM query hit (non-fatal):', error);
+  }
+}
+
+/**
+ * Upserts a batch of OSM elements with limited concurrency, to avoid opening
+ * a huge number of simultaneous Postgres connections when Overpass returns
+ * many results (Overpass responses for amenity=fuel over 100km can easily
+ * contain several hundred elements).
+ */
+async function upsertOsmStationsBatch(payload: any, elements: any[], cachedAt: string): Promise<void> {
+  const validElements = elements
+    .map((el) => {
+      const osmId = String(el.id || el.osmId || '');
+      const elLat = el.lat ?? el.center?.lat;
+      const elLon = el.lon ?? el.center?.lon;
+      if (!osmId || elLat === undefined || elLon === undefined) return null;
+      const tags = el.tags || {};
+      return {
+        osmId,
+        data: {
+          osmId,
+          type: el.type || 'node',
+          latitude: elLat,
+          longitude: elLon,
+          brand: tags.brand || '',
+          operator: tags.operator || '',
+          name: tags.name || '',
+          country: tags['addr:country'] || '',
+          postcode: tags['addr:postcode'] || '',
+          street: tags['addr:street'] || '',
+          cachedAt,
+        },
+      };
+    })
+    .filter((v): v is { osmId: string; data: any } => v !== null);
+
+  if (validElements.length === 0) return;
+
+  // One bulk lookup instead of one `find` per element.
+  const existing = await payload.find({
+    collection: 'osm-stations',
+    where: { osmId: { in: validElements.map((v) => v.osmId) } },
+    limit: validElements.length,
+  });
+  const existingByOsmId = new Map(existing.docs.map((doc: any) => [doc.osmId, doc.id]));
+
+  const CONCURRENCY = 10;
+  for (let i = 0; i < validElements.length; i += CONCURRENCY) {
+    const batch = validElements.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      batch.map(({ osmId, data }) => {
+        const existingId = existingByOsmId.get(osmId);
+        return existingId
+          ? payload.update({ collection: 'osm-stations', id: existingId, data })
+          : payload.create({ collection: 'osm-stations', data });
+      })
+    );
+  }
+}
+
 export async function saveOsmQueryToCache(
   lat: number,
   lon: number,
@@ -241,50 +370,8 @@ export async function saveOsmQueryToCache(
     const payload = await getPayload({ config });
     const cachedAt = new Date().toISOString();
 
-    // 1. Save/Upsert elements
-    for (const el of elements) {
-      const osmId = String(el.id || el.osmId);
-      if (!osmId) continue;
-
-      const elLat = el.lat ?? el.center?.lat;
-      const elLon = el.lon ?? el.center?.lon;
-      if (elLat === undefined || elLon === undefined) continue;
-
-      const tags = el.tags || {};
-
-      const data = {
-        osmId,
-        type: el.type || 'node',
-        latitude: elLat,
-        longitude: elLon,
-        brand: tags.brand || '',
-        operator: tags.operator || '',
-        name: tags.name || '',
-        country: tags['addr:country'] || '',
-        postcode: tags['addr:postcode'] || '',
-        street: tags['addr:street'] || '',
-        cachedAt,
-      };
-
-      const existing = await payload.find({
-        collection: 'osm-stations',
-        where: { osmId: { equals: osmId } },
-        limit: 1,
-      });
-
-      if (existing.docs.length > 0) {
-        await payload.update({
-          collection: 'osm-stations',
-          id: existing.docs[0].id,
-          data,
-        });
-      } else {
-        await payload.create({
-          collection: 'osm-stations',
-          data,
-        });
-      }
-    }
+    // 1. Save/Upsert elements (batched, bounded concurrency)
+    await upsertOsmStationsBatch(payload, elements, cachedAt);
 
     // 2. Log query zone (with 1km buffer for coverage overlay)
     await payload.create({
@@ -294,9 +381,44 @@ export async function saveOsmQueryToCache(
         longitude: lon,
         radius: radiusKm + 1.0, // Cache with 1km padding
         queriedAt: cachedAt,
+        hitCount: 0,
       },
     });
   } catch (error) {
     console.error('Error saving OSM query to cache:', error);
+  }
+}
+
+/**
+ * Same as saveOsmQueryToCache but updates an existing osm-queries document
+ * in place (bumping queriedAt) instead of creating a new one. Used by the
+ * daily pre-warm cron to refresh a popular zone without piling up duplicate
+ * coverage circles for the same spot.
+ */
+export async function refreshOsmQueryCache(
+  queryId: string | number,
+  lat: number,
+  lon: number,
+  radiusKm: number,
+  elements: any[]
+): Promise<void> {
+  try {
+    const payload = await getPayload({ config });
+    const cachedAt = new Date().toISOString();
+
+    await upsertOsmStationsBatch(payload, elements, cachedAt);
+
+    await payload.update({
+      collection: 'osm-queries',
+      id: queryId,
+      data: {
+        latitude: lat,
+        longitude: lon,
+        radius: radiusKm + 1.0,
+        queriedAt: cachedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error refreshing OSM query cache:', error);
   }
 }

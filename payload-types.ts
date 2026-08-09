@@ -252,6 +252,14 @@ export interface OsmQuery {
   longitude: number;
   radius: number;
   queriedAt: string;
+  /**
+   * Nombre de requêtes utilisateur servies depuis ce cache. Utilisé par le cron de pré-chauffe pour identifier les zones populaires.
+   */
+  hitCount: number;
+  /**
+   * Dernière fois qu’une requête utilisateur a été servie depuis ce cache.
+   */
+  lastHitAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -447,6 +455,8 @@ export interface OsmQueriesSelect<T extends boolean = true> {
   longitude?: T;
   radius?: T;
   queriedAt?: T;
+  hitCount?: T;
+  lastHitAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

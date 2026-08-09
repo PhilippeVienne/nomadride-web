@@ -168,6 +168,11 @@ const STATEMENTS: string[] = [
   `ALTER TABLE "osm_queries" ADD COLUMN IF NOT EXISTS "queried_at" timestamp with time zone`,
   `ALTER TABLE "osm_queries" ALTER COLUMN "query_hash" DROP NOT NULL`,
   `ALTER TABLE "osm_queries" ALTER COLUMN "fetched_at" DROP NOT NULL`,
+  // hit_count/last_hit_at track how often a cached zone is served to users,
+  // so the daily pre-warm cron can identify and refresh the popular ones.
+  `ALTER TABLE "osm_queries" ADD COLUMN IF NOT EXISTS "hit_count" numeric DEFAULT 0`,
+  `ALTER TABLE "osm_queries" ADD COLUMN IF NOT EXISTS "last_hit_at" timestamp with time zone`,
+  `CREATE INDEX IF NOT EXISTS "osm_queries_hit_count_idx" ON "osm_queries" ("hit_count")`,
 
   // ---------------------------------------------------------------------
   // payload core tables
