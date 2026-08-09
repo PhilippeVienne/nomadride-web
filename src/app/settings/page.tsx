@@ -10,8 +10,9 @@ export default async function SettingsPage() {
   const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
 
   // Credentials GeoRide + trackers n'ont pas de sens pour un compte invité.
+  // `from=settings` lets the Pit-Stop page explain why the guest landed here.
   if (!isAuthenticated) {
-    redirect('/pitstop');
+    redirect('/pitstop?from=settings');
   }
 
   let serializableUser = {

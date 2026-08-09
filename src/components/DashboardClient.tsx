@@ -322,7 +322,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           )}
 
           {syncError && (
-            <div style={{ color: '#ef4444', fontSize: '13px', background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ color: 'var(--color-danger)', fontSize: '13px', background: 'var(--color-danger-bg)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
               <AlertCircle size={16} />
               <span>{syncError}</span>
             </div>
