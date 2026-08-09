@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { BaseStation } from './types';
 import { haversineDistance } from './utils';
 import {
@@ -175,8 +176,14 @@ export async function getFuelElementsAround(
   const cached = await getCachedOsmStations(lat, lon, radiusKm, MAX_CACHE_AGE_MS);
 
   if (cached) {
-    // Popularity tracking must never block or fail the request.
-    void markOsmQueryHit(cached.queryId);
+    // Popularity tracking must never block the request — but it must still
+    // run inside `after()` rather than as a bare fire-and-forget promise.
+    // On Vercel's Fluid Compute the function instance can be frozen right
+    // after the response is sent; a detached `payload.update()` left
+    // in-flight at that moment holds its Postgres connection open forever,
+    // and enough of those over time exhaust the connection pool and hang
+    // every subsequent request that needs one.
+    after(() => markOsmQueryHit(cached.queryId));
 
     const uiStale = cached.ageMs >= FRESH_THRESHOLD_MS;
 
