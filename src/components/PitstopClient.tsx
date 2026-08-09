@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   RefreshCw,
   Bike,
@@ -76,7 +76,21 @@ interface PitstopClientProps {
 
 export default function PitstopClient({ trips, user }: PitstopClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Guests get redirected here from "/" or "/settings" (both require an
+  // account) — surface *why* instead of silently changing the URL on them.
+  const [guestRedirectFrom, setGuestRedirectFrom] = useState<string | null>(() => {
+    const from = searchParams.get('from');
+    return from === 'home' || from === 'settings' ? from : null;
+  });
+  useEffect(() => {
+    if (guestRedirectFrom) {
+      router.replace('/pitstop', { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Active trip state (for shortcut)
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
@@ -382,6 +396,24 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
             </div>
           </div>
 
+          {guestRedirectFrom && (
+            <div className="guest-redirect-banner">
+              <AlertCircle size={14} />
+              <span>
+                {guestRedirectFrom === 'home'
+                  ? 'Connectez-vous pour accéder à votre historique de trajets.'
+                  : 'Connectez-vous pour accéder à vos réglages de compte.'}
+              </span>
+              <button
+                type="button"
+                className="guest-redirect-banner-close"
+                onClick={() => setGuestRedirectFrom(null)}
+                aria-label="Fermer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* Search Container */}
           <div className="input-group">
@@ -457,10 +489,13 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
             </button>
           )}
 
-          {/* Pit-stop settings — collapsible on mobile */}
+          {/* Pit-stop settings — collapsible on mobile. The current fuel/radius
+              are always shown in the header itself, so a first-time mobile
+              user isn't left guessing what's hidden behind the toggle. */}
           <div className="pitstop-settings-header" onClick={() => setShowSettings(!showSettings)}>
             <Sliders size={14} />
             <span>Paramètres de recherche</span>
+            <span className="pitstop-settings-summary">{selectedFuel.toUpperCase()} · {radius} km</span>
             <span className="pitstop-settings-toggle">{showSettings ? '▲' : '▼'}</span>
           </div>
 
@@ -551,7 +586,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
 
             {isRefreshingStale && !isSearchingStations && (
               <div style={{ fontSize: '11px', color: 'var(--accent-orange)', marginBottom: '6px' }}>
-                Résultats en cache — vérification d&apos;une version plus récente...
+                Actualisation des prix en cours...
               </div>
             )}
 
@@ -562,7 +597,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
                   <span>Recherche des meilleurs prix...</span>
                 </div>
               ) : stationsError ? (
-                <div style={{ color: '#ef4444', fontSize: '13px', background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ color: 'var(--color-danger)', fontSize: '13px', background: 'var(--color-danger-bg)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <AlertCircle size={16} />
                   <span>{stationsError}</span>
                 </div>
@@ -618,7 +653,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
                       </div>
 
                       {station.freshnessPenaltyEur > 0 && (
-                        <div style={{ fontSize: '10px', color: '#b45309', marginTop: '2px' }}>
+                        <div style={{ fontSize: '10px', color: 'var(--color-warning)', marginTop: '2px' }}>
                           ⚠️ Prix obsolète (+{station.freshnessPenaltyEur.toFixed(3)}€/L pénalité)
                         </div>
                       )}

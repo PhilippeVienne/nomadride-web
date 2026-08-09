@@ -292,7 +292,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
                   </div>
                 ) : trackersError ? (
                   <div className="tracker-error-box">
-                    <AlertTriangle size={18} style={{ color: '#ef4444' }} />
+                    <AlertTriangle size={18} style={{ color: 'var(--color-danger)' }} />
                     <span>{trackersError}</span>
                   </div>
                 ) : availableTrackers.length === 0 ? (
@@ -350,7 +350,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
 
           {/* 3. Danger Zone Reset Card */}
           <div className="settings-card danger-card" style={{ marginTop: '30px' }}>
-            <h3 className="settings-card-title" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 className="settings-card-title" style={{ color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Trash2 size={18} /> Zone de danger
             </h3>
             <p className="settings-card-desc">

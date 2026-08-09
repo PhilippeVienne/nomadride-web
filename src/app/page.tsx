@@ -10,8 +10,10 @@ export default async function Page() {
   const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
 
   // Guests only get the Pit-Stop demo; trip history requires a GeoRide account.
+  // `from=home` lets the Pit-Stop page explain *why* the URL changed instead
+  // of silently landing the guest somewhere they didn't ask for.
   if (!isAuthenticated) {
-    redirect('/pitstop');
+    redirect('/pitstop?from=home');
   }
 
   let trips: any[] = [];

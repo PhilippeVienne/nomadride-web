@@ -233,8 +233,8 @@ export default function Map({
               {isActive && (
                 <Marker position={trip.path[0]}>
                   <Popup>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
-                      <strong style={{ color: '#f97316' }}>Départ</strong><br />
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
+                      <strong style={{ color: 'var(--accent-orange)' }}>Départ</strong><br />
                       {trip.title || 'Trajet'}
                     </div>
                   </Popup>
@@ -245,8 +245,8 @@ export default function Map({
               {isActive && (
                 <Marker position={trip.path[trip.path.length - 1]}>
                   <Popup>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
-                      <strong style={{ color: '#06b6d4' }}>Arrivée</strong><br />
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
+                      <strong style={{ color: 'var(--accent-cyan)' }}>Arrivée</strong><br />
                       {trip.title || 'Trajet'}
                     </div>
                   </Popup>
@@ -265,7 +265,7 @@ export default function Map({
                 }}
               >
                 <Popup>
-                  <div style={{ color: '#0f172a', fontFamily: 'var(--font-sans)', minWidth: '150px' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)', minWidth: '150px' }}>
                     <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', fontWeight: '600' }}>{trip.title || 'Trajet'}</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
                       <span>🏁 Distance: <strong>{trip.distance || 0} km</strong></span>
@@ -306,7 +306,7 @@ export default function Map({
             })}
           >
             <Popup>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#0f172a' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--color-text-primary)' }}>
                 <strong>Centre de recherche</strong><br />
                 Coordonnées : {searchCenter[0].toFixed(5)}, {searchCenter[1].toFixed(5)}
               </div>
@@ -343,18 +343,18 @@ export default function Map({
               }}
             >
               <Popup>
-                <div style={{ color: '#0f172a', fontFamily: 'var(--font-sans)', minWidth: '220px' }}>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
+                <div style={{ color: 'var(--color-text-primary)', fontFamily: 'var(--font-sans)', minWidth: '220px' }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                     {station.brand || station.name}
                   </h4>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>
                     {station.address}, {station.postCode} {station.city} ({station.country})
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', background: 'rgba(255, 255, 255, 0.05)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Prix du litre ({selectedFuelType.toUpperCase()}) :</span>
-                      <strong style={{ color: priceRank === 'cheap' ? '#10b981' : '#f97316' }}>
+                      <strong style={{ color: priceRank === 'cheap' ? 'var(--accent-green)' : 'var(--accent-orange)' }}>
                         {hasPrice ? `${price.toFixed(3)} ${station.currency}` : 'Non disponible'}
                       </strong>
                     </div>
@@ -364,7 +364,7 @@ export default function Map({
                       <span>{(station.distanceKm * 2).toFixed(1)} km</span>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '4px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--color-border)', paddingTop: '4px', marginTop: '2px' }}>
                       <span>Coût du détour :</span>
                       <strong>{hasPrice && station.detourCostEur !== null && station.detourCostEur !== undefined ? (station.currency === 'CHF' ? `${(station.detourCostEur * 1.05).toFixed(2)} CHF` : `${station.detourCostEur.toFixed(2)} €`) : '—'}</strong>
                     </div>
@@ -374,21 +374,21 @@ export default function Map({
                       <span>{hasPrice && station.totalFuelCostEur !== null && station.totalFuelCostEur !== undefined ? (station.currency === 'CHF' ? `${(station.totalFuelCostEur * 1.05).toFixed(2)} CHF` : `${station.totalFuelCostEur.toFixed(2)} €`) : '—'}</span>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '4px', fontWeight: 'bold' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: '4px', fontWeight: 'bold' }}>
                       <span>Coût effectif total :</span>
-                      <strong style={{ color: priceRank === 'cheap' ? '#10b981' : '#0f172a' }}>
+                      <strong style={{ color: priceRank === 'cheap' ? 'var(--accent-green)' : 'var(--color-text-primary)' }}>
                         {hasPrice ? `${station.totalCostOriginalCurrency.toFixed(2)} ${station.currency}` : 'N/A'}
                       </strong>
                     </div>
                   </div>
 
                   {station.freshnessPenaltyEur > 0 && (
-                    <div style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', padding: '6px 8px', borderRadius: '6px', border: '1px solid #fef3c7', marginTop: '6px', display: 'flex', gap: '4px' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--color-warning)', background: 'var(--color-warning-bg)', padding: '6px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245, 158, 11, 0.25)', marginTop: '6px', display: 'flex', gap: '4px' }}>
                       <span>⚠️ Pénalité fraîcheur de <strong>{station.freshnessPenaltyEur.toFixed(3)} €/L</strong> (+12h sans MAJ)</span>
                     </div>
                   )}
 
-                  <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'right', marginTop: '6px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)', textAlign: 'right', marginTop: '6px' }}>
                     Mis à jour : {new Date(station.updatedAt).toLocaleString('fr-FR')}
                   </div>
                 </div>
