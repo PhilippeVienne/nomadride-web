@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authorizationCodeGrant } from 'openid-client';
 import {
+  getAppBaseUrl,
   getGoogleConfig,
   signSessionToken,
   SESSION_COOKIE_NAME,
@@ -28,14 +29,23 @@ export async function GET(request: NextRequest) {
   if (!codeVerifier || !expectedState || !expectedNonce) {
     console.error('[Auth Callback] Missing PKCE/state/nonce cookies (expired or cleared).');
     return clearTempCookies(
-      NextResponse.redirect(new URL('/?authError=missing_state', request.url)),
+      NextResponse.redirect(new URL('/?authError=missing_state', getAppBaseUrl())),
     );
   }
 
   try {
     const config = await getGoogleConfig();
 
-    const tokens = await authorizationCodeGrant(config, request.nextUrl, {
+    // openid-client derives the token-exchange redirect_uri from this URL's origin —
+    // must match APP_BASE_URL (used to build the authorization request's redirect_uri
+    // in /auth/login), not request.nextUrl's origin, which reflects the internal
+    // address Next.js sees behind Coolify's reverse proxy.
+    const currentUrl = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      getAppBaseUrl(),
+    );
+
+    const tokens = await authorizationCodeGrant(config, currentUrl, {
       pkceCodeVerifier: codeVerifier,
       expectedState,
       expectedNonce,
@@ -52,14 +62,14 @@ export async function GET(request: NextRequest) {
     const sessionToken = await signSessionToken({ sub, email });
 
     const response = clearTempCookies(
-      NextResponse.redirect(new URL(returnTo, request.url)),
+      NextResponse.redirect(new URL(returnTo, getAppBaseUrl())),
     );
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, sessionCookieOptions);
     return response;
   } catch (error) {
     console.error('[Auth Callback] Google authorization code exchange failed:', error);
     return clearTempCookies(
-      NextResponse.redirect(new URL('/?authError=exchange_failed', request.url)),
+      NextResponse.redirect(new URL('/?authError=exchange_failed', getAppBaseUrl())),
     );
   }
 }
