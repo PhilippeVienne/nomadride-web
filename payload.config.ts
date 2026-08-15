@@ -52,8 +52,21 @@ const getSslCa = () => {
   return process.env.POSTGRES_CA.replace(/\\n/g, '\n');
 };
 
+// `isProd` alone isn't a reliable signal for whether SSL is needed: it was a
+// safe default when production always meant Supabase over the public
+// internet (SSL required), but a self-hosted Postgres reachable only over
+// the deployment platform's internal Docker network (e.g. Coolify) usually
+// has no SSL listener at all, and forcing it makes the pg driver throw
+// "The server does not support SSL connections". DATABASE_SSL lets the
+// deployment be explicit; absent, it falls back to the old isProd behavior.
+const shouldUseSsl = () => {
+  if (process.env.DATABASE_SSL === 'false') return false;
+  if (process.env.DATABASE_SSL === 'true') return true;
+  return isProd;
+};
+
 const hasCa = !!process.env.POSTGRES_CA;
-console.log(`[Payload DB SSL Config] isProd: ${isProd} | hasPostgresCa: ${hasCa}`);
+console.log(`[Payload DB SSL Config] isProd: ${isProd} | useSsl: ${shouldUseSsl()} | hasPostgresCa: ${hasCa}`);
 
 export default buildConfig({
   admin: {
@@ -73,7 +86,7 @@ export default buildConfig({
     pool: {
       connectionString: getDbConnectionString(),
       connectionTimeoutMillis: 10000,
-      ssl: isProd
+      ssl: shouldUseSsl()
         ? {
             rejectUnauthorized: false,
             ...(getSslCa() ? { ca: getSslCa() } : {}),
