@@ -10,6 +10,7 @@ const STATEMENTS: string[] = [
     "email" varchar NOT NULL,
     "password" varchar,
     "auth0_id" varchar,
+    "google_id" varchar,
     "geo_ride_email" varchar,
     "geo_ride_password" varchar,
     "last_sync_date" timestamp with time zone,
@@ -31,6 +32,7 @@ const STATEMENTS: string[] = [
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hash" varchar`,
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "login_attempts" numeric DEFAULT 0`,
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lock_until" timestamp with time zone`,
+  `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "google_id" varchar`,
 
   // users_selected_trackers (array field: id is a Payload-generated hex
   // string, NOT an auto-incrementing integer — this is the bug that broke

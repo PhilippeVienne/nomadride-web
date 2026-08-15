@@ -54,7 +54,7 @@ interface User {
   id: string;
   geoRideEmail?: string;
   lastSyncDate?: string;
-  auth0Id?: string;
+  googleId?: string;
   isAuthenticated?: boolean;
   selectedFuel?: FuelType;
   searchRadius?: number;
@@ -116,7 +116,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   // Filter out doubtful/fallback trips (path length <= 2)
   const trips = initialTrips.filter(t => t.path && t.path.length > 2);
 
-  const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_auth0_') || user.geoRideEmail === 'motard@example.com';
+  const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_') || user.geoRideEmail === 'motard@example.com';
 
   // Compute overall stats
   const totalKm = trips.reduce((acc, t) => acc + (t.distance || 0), 0);
@@ -140,8 +140,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
     setSyncProgress(null);
 
     try {
-      const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
-      const res = await fetch(`/api/sync-georide${userIdParam}`, {
+      const res = await fetch(`/api/sync-georide`, {
         method: 'POST',
       });
 
@@ -205,7 +204,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
           <div className="auth-status-container">
             {user.isAuthenticated ? (
               <>
-                <span className="auth-badge authenticated">Auth0 Connecté</span>
+                <span className="auth-badge authenticated">Google Connecté</span>
                 <span style={{ color: 'var(--color-text-muted)' }}>|</span>
                 <a href="/auth/logout" className="btn-auth btn-auth-logout">Se déconnecter</a>
               </>
@@ -213,7 +212,7 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
               <>
                 <span className="auth-badge guest">Mode Invité</span>
                 <span style={{ color: 'var(--color-text-muted)' }}>|</span>
-                <a href="/auth/login" className="btn-auth btn-auth-login">Se connecter avec Auth0</a>
+                <a href="/auth/login" className="btn-auth btn-auth-login">Se connecter avec Google</a>
               </>
             )}
             <span style={{ color: 'var(--color-text-muted)' }}>|</span>

@@ -15,9 +15,9 @@ export function getPayloadSecret(): string {
 
 /**
  * Generates an unguessable random password. Used to provision the Payload
- * `users` record backing an Auth0 identity — that password field is never
- * used to log in (auth is handled by Auth0), so it must not be a shared,
- * hardcoded value.
+ * `users` record backing a Google OIDC identity — that password field is
+ * never used to log in (auth is handled by Google), so it must not be a
+ * shared, hardcoded value.
  */
 export function generateRandomPassword(): string {
   return crypto.randomBytes(24).toString('hex');

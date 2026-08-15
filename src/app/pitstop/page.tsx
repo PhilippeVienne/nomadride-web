@@ -1,20 +1,20 @@
 import { getPayload } from 'payload';
 import config from '../../../payload.config';
 import PitstopClient from '@/components/PitstopClient';
-import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
+import { getOrCreateUser, resolveGoogleSession } from '@/lib/getSessionUser';
 import type { FuelType } from '@/lib/pitstop/types';
 
 export const revalidate = 0;
 
 export default async function PitstopPage() {
-  const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
+  const { googleId, googleEmail, isAuthenticated } = await resolveGoogleSession();
 
   let trips: any[] = [];
   let serializableUser = {
     id: '0',
     geoRideEmail: undefined as string | undefined,
     lastSyncDate: undefined as string | undefined,
-    auth0Id,
+    googleId,
     isAuthenticated,
     selectedFuel: undefined as FuelType | undefined,
     searchRadius: undefined as number | undefined,
@@ -30,7 +30,7 @@ export default async function PitstopPage() {
     const payload = await getPayload({ config });
 
     // Fetch or provision the user record
-    const user = await getOrCreateUser(payload, auth0Id, auth0Email);
+    const user = await getOrCreateUser(payload, googleId, googleEmail);
 
     // Fetch trips for trip shortcut feature
     const tripsResult = await payload.find({
@@ -60,7 +60,7 @@ export default async function PitstopPage() {
       id: String(user.id),
       geoRideEmail: user.geoRideEmail || undefined,
       lastSyncDate: user.lastSyncDate || undefined,
-      auth0Id: user.auth0Id || auth0Id,
+      googleId: user.googleId || googleId,
       isAuthenticated,
       selectedFuel: (user.selectedFuel ?? undefined) as FuelType | undefined,
       searchRadius: user.searchRadius ?? undefined,

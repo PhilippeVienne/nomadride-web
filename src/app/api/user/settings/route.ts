@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { findUserByAuth0Id, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { findUserByGoogleId, resolveGoogleSession } from '../../../../lib/getSessionUser';
 import { generateRandomPassword } from '../../../../utils/crypto';
 
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4, with local-dev fallback)
-    const { auth0Id } = await resolveAuth0Session(request);
+    // 1. Get user session (Google OIDC, with local-dev fallback)
+    const { googleId } = await resolveGoogleSession(request);
 
     // Parse request body safely
     let body: any = {};
@@ -22,23 +22,23 @@ export async function POST(request: NextRequest) {
     const { geoRideEmail, geoRidePassword, trackingStartDate, selectedTrackers } = body;
 
     // 2. Fetch user record in Payload (auto-creates schema if tables missing)
-    const userResult = await findUserByAuth0Id(payloadInstance, auth0Id);
+    const userResult = await findUserByGoogleId(payloadInstance, googleId);
 
     let user = userResult.docs[0];
     if (!user) {
-      const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
+      const sanitizedGoogleId = googleId.replace(/[^a-zA-Z0-9]/g, '_');
       const userEmail = (geoRideEmail && typeof geoRideEmail === 'string' && geoRideEmail.includes('@'))
         ? geoRideEmail.trim()
-        : `motard_${sanitizedAuth0Id}@example.com`;
+        : `motard_${sanitizedGoogleId}@example.com`;
 
       user = await payloadInstance.create({
         collection: 'users',
         data: {
           email: userEmail,
           // Payload requires a password for this auth-enabled collection, but
-          // it's never used to log in directly (Auth0 handles authentication).
+          // it's never used to log in directly (Google OIDC handles authentication).
           password: generateRandomPassword(),
-          auth0Id,
+          googleId,
           geoRideEmail: (geoRideEmail && typeof geoRideEmail === 'string') ? geoRideEmail.trim() : userEmail,
           geoRidePassword: (geoRidePassword && typeof geoRidePassword === 'string') ? geoRidePassword : undefined,
           trackingStartDate: (trackingStartDate && !isNaN(new Date(trackingStartDate).getTime()))

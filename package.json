@@ -10,13 +10,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^4.22.0",
     "@payloadcms/db-postgres": "^3.85.1",
     "@payloadcms/next": "^3.85.1",
     "@payloadcms/richtext-lexical": "^3.85.1",
+    "jose": "^6.2.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.18.0",
     "next": "16.2.9",
+    "openid-client": "^6.8.4",
     "payload": "^3.85.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",

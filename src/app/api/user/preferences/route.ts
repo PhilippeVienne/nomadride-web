@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { getOrCreateUser, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { getOrCreateUser, resolveGoogleSession } from '../../../../lib/getSessionUser';
 
 export async function POST(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4, with local-dev fallback)
-    const { auth0Id, auth0Email } = await resolveAuth0Session(request);
+    // 1. Get user session (Google OIDC, with local-dev fallback)
+    const { googleId, googleEmail } = await resolveGoogleSession(request);
 
     // Parse request body
     const body = await request.json();
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 2. Fetch or create the user record in Payload
-    const user = await getOrCreateUser(payloadInstance, auth0Id, auth0Email);
+    const user = await getOrCreateUser(payloadInstance, googleId, googleEmail);
 
     // 3. Build update data object
     const updateData: any = {};

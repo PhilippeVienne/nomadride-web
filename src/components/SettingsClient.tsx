@@ -9,7 +9,7 @@ interface User {
   id: string;
   geoRideEmail?: string;
   lastSyncDate?: string;
-  auth0Id?: string;
+  googleId?: string;
   trackingStartDate?: string;
   selectedTrackers: string[];
   isAuthenticated?: boolean;
@@ -28,7 +28,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
   const router = useRouter();
 
   // Helper to check if email is default local fallback
-  const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_auth0_') || user.geoRideEmail === 'motard@example.com';
+  const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_') || user.geoRideEmail === 'motard@example.com';
 
   // Input states
   const [geoRideEmail, setGeoRideEmail] = useState(isDefaultLocalEmail ? '' : user.geoRideEmail || '');
@@ -63,7 +63,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
   const loadTrackers = async () => {
     // Only load if user email seems set
     const activeEmail = geoRideEmail || user.geoRideEmail;
-    if (!activeEmail || activeEmail.startsWith('motard_auth0_') || activeEmail === 'motard@example.com') {
+    if (!activeEmail || activeEmail.startsWith('motard_') || activeEmail === 'motard@example.com') {
       setAvailableTrackers([]);
       setIsLoadingTrackers(false);
       return;
@@ -73,8 +73,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
       setIsLoadingTrackers(true);
       setTrackersError(null);
       
-      const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
-      const res = await fetch(`/api/user/trackers${userIdParam}`);
+      const res = await fetch(`/api/user/trackers`);
       
       if (!res.ok) {
         const errorData = await res.json();
@@ -94,7 +93,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
   // Fetch trackers on mount
   useEffect(() => {
     loadTrackers();
-  }, [user.geoRideEmail, user.auth0Id]);
+  }, [user.geoRideEmail, user.googleId]);
 
   // Handle selected trackers checkbox toggle
   const handleTrackerToggle = (trackerId: string) => {
@@ -113,8 +112,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
     setSaveError(null);
 
     try {
-      const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
-      const res = await fetch(`/api/user/settings${userIdParam}`, {
+      const res = await fetch(`/api/user/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,8 +152,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
     setDeleteError(null);
 
     try {
-      const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
-      const res = await fetch(`/api/user/trips${userIdParam}`, {
+      const res = await fetch(`/api/user/trips`, {
         method: 'DELETE',
       });
 
@@ -188,7 +185,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
         <div className="navbar-actions navbar-actions--desktop">
           <div className="auth-status-container">
             {user.isAuthenticated ? (
-              <span className="auth-badge authenticated">Auth0 Connecté</span>
+              <span className="auth-badge authenticated">Google Connecté</span>
             ) : (
               <span className="auth-badge guest">Mode Invité</span>
             )}

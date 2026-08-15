@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../../payload.config';
-import { findUserByAuth0Id, resolveAuth0Session } from '../../../../lib/getSessionUser';
+import { findUserByGoogleId, resolveGoogleSession } from '../../../../lib/getSessionUser';
 
 export async function DELETE(request: NextRequest) {
   try {
     const payloadInstance = await getPayload({ config });
 
-    // 1. Get user session (Auth0 v4, with local-dev fallback)
-    const { auth0Id } = await resolveAuth0Session(request);
+    // 1. Get user session (Google OIDC, with local-dev fallback)
+    const { googleId } = await resolveGoogleSession(request);
 
     // 2. Fetch user record from Payload database
-    const userResult = await findUserByAuth0Id(payloadInstance, auth0Id);
+    const userResult = await findUserByGoogleId(payloadInstance, googleId);
 
     const user = userResult.docs[0];
     if (!user) {
