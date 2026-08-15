@@ -41,6 +41,22 @@ export default function AboutPage() {
           <div className="settings-form-wrapper">
             <div className="settings-card">
               <h3 className="settings-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Bike size={18} style={{ color: 'var(--accent-green)' }} /> Qu&apos;est-ce que NomadRide ?
+              </h3>
+              <p className="settings-card-desc">
+                NomadRide est un compagnon de route pour motards : il synchronise automatiquement l&apos;historique
+                de vos trajets depuis votre traceur GeoRide et les affiche sur une carte interactive (distance,
+                durée, tracé GPS).
+              </p>
+              <p className="settings-card-desc">
+                Il inclut aussi le module Pit-Stop : entrez votre itinéraire, et NomadRide recherche pour vous les
+                stations-service les moins chères à proximité, en tenant compte du carburant choisi et de
+                l&apos;autonomie de votre moto.
+              </p>
+            </div>
+
+            <div className="settings-card">
+              <h3 className="settings-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Scale size={18} style={{ color: 'var(--accent-orange)' }} /> Mentions légales
               </h3>
               <p className="settings-card-desc">
@@ -60,7 +76,7 @@ export default function AboutPage() {
                 <ShieldCheck size={18} style={{ color: 'var(--accent-green)' }} /> Données personnelles &amp; RGPD
               </h3>
               <p className="settings-card-desc">
-                Données traitées : votre identifiant de connexion Auth0, les identifiants de votre compte GeoRide
+                Données traitées : votre identifiant de connexion Google, les identifiants de votre compte GeoRide
                 (email et mot de passe, stockés chiffrés), ainsi que l&apos;historique de trajets et les positions
                 GPS synchronisés depuis GeoRide.
               </p>
@@ -69,12 +85,12 @@ export default function AboutPage() {
                 stations-service les moins chères sur votre itinéraire.
               </p>
               <p className="settings-card-desc">
-                Sous-traitants : Auth0 (authentification), Supabase (hébergement base de données), Vercel
+                Sous-traitants : Google (authentification), Supabase (hébergement base de données), Vercel
                 (hébergement applicatif), et GeoRide (source des données de trajets — un compte tiers dont vous
                 fournissez vous-même les identifiants).
               </p>
               <p className="settings-card-desc">
-                Cookies : uniquement le cookie de session nécessaire à l&apos;authentification Auth0. Aucun cookie
+                Cookies : uniquement le cookie de session nécessaire à l&apos;authentification. Aucun cookie
                 publicitaire ni traceur analytique tiers.
               </p>
               <p className="settings-card-desc">

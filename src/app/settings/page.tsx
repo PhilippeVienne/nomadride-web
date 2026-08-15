@@ -2,12 +2,12 @@ import { getPayload } from 'payload';
 import { redirect } from 'next/navigation';
 import config from '../../../payload.config';
 import SettingsClient from '@/components/SettingsClient';
-import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
+import { getOrCreateUser, resolveGoogleSession } from '@/lib/getSessionUser';
 
 export const revalidate = 0; // Disable caching for user configuration updates
 
 export default async function SettingsPage() {
-  const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
+  const { googleId, googleEmail, isAuthenticated } = await resolveGoogleSession();
 
   // Credentials GeoRide + trackers n'ont pas de sens pour un compte invité.
   // `from=settings` lets the Pit-Stop page explain why the guest landed here.
@@ -19,7 +19,7 @@ export default async function SettingsPage() {
     id: '0',
     geoRideEmail: undefined as string | undefined,
     lastSyncDate: undefined as string | undefined,
-    auth0Id,
+    googleId,
     trackingStartDate: undefined as string | undefined,
     selectedTrackers: [] as string[],
     isAuthenticated,
@@ -29,14 +29,14 @@ export default async function SettingsPage() {
     const payload = await getPayload({ config });
 
     // Fetch or provision the user record from Payload database
-    const user = await getOrCreateUser(payload, auth0Id, auth0Email);
+    const user = await getOrCreateUser(payload, googleId, googleEmail);
 
     // Map to a clean serialized object for hydration
     serializableUser = {
       id: String(user.id),
       geoRideEmail: user.geoRideEmail || undefined,
       lastSyncDate: user.lastSyncDate || undefined,
-      auth0Id: user.auth0Id || auth0Id,
+      googleId: user.googleId || googleId,
       trackingStartDate: user.trackingStartDate || undefined,
       selectedTrackers: (user.selectedTrackers as { trackerId: string }[])?.map(st => st.trackerId) || [],
       isAuthenticated,

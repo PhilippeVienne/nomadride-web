@@ -1,53 +1,59 @@
+import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import type { Payload } from 'payload';
-import { auth0 } from './auth0';
+import { verifySessionToken, SESSION_COOKIE_NAME } from './googleAuth';
 import { ensurePayloadSchema } from './ensureSchema';
 import { generateRandomPassword } from '../utils/crypto';
 
-export const LOCAL_DEV_AUTH0_ID = 'auth0|default_local_user_95';
+export const LOCAL_DEV_GOOGLE_ID = 'google|default_local_user_95';
 
-export interface Auth0SessionInfo {
-  auth0Id: string;
-  auth0Email?: string;
+export interface GoogleSessionInfo {
+  googleId: string;
+  googleEmail?: string;
   isAuthenticated: boolean;
 }
 
 /**
- * Resolves the current Auth0 identity. Works both in Server Components
- * (no `request`) and in Route Handlers (`request` passed, also allowing a
- * `?userId=` override for local development/testing).
+ * Resolves the current Google identity from our own signed session cookie.
+ * Works both in Server Components (no `request`, cookie read via
+ * `next/headers`) and in Route Handlers (`request` passed, cookie read via
+ * `request.cookies`).
  * Falls back to a fixed local-dev identity when no session is available.
+ * The `?userId=` override is only honored outside production, to avoid
+ * letting anyone impersonate a googleId via query string in prod.
  */
-export async function resolveAuth0Session(request?: NextRequest): Promise<Auth0SessionInfo> {
-  let auth0Id: string | undefined;
-  let auth0Email: string | undefined;
+export async function resolveGoogleSession(request?: NextRequest): Promise<GoogleSessionInfo> {
+  let googleId: string | undefined;
+  let googleEmail: string | undefined;
 
-  try {
-    const session = request ? await auth0.getSession(request) : await auth0.getSession();
-    auth0Id = session?.user?.sub;
-    auth0Email = session?.user?.email;
-  } catch {
-    console.warn('[Auth] Auth0 not fully configured or no active session. Using local development fallback.');
+  const rawToken = request
+    ? request.cookies.get(SESSION_COOKIE_NAME)?.value
+    : (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+
+  if (rawToken) {
+    const session = await verifySessionToken(rawToken);
+    googleId = session?.sub;
+    googleEmail = session?.email;
   }
 
-  if (!auth0Id && request) {
-    auth0Id = new URL(request.url).searchParams.get('userId') || undefined;
+  if (!googleId && request && process.env.NODE_ENV !== 'production') {
+    googleId = new URL(request.url).searchParams.get('userId') || undefined;
   }
 
-  const isAuthenticated = !!auth0Id;
-  return { auth0Id: auth0Id || LOCAL_DEV_AUTH0_ID, auth0Email, isAuthenticated };
+  const isAuthenticated = !!googleId;
+  return { googleId: googleId || LOCAL_DEV_GOOGLE_ID, googleEmail, isAuthenticated };
 }
 
 /**
- * Finds the Payload `users` record for a given Auth0 id, self-healing the
+ * Finds the Payload `users` record for a given Google id, self-healing the
  * database schema if the underlying tables don't exist yet (fresh
  * deployments against an empty Postgres/Supabase database).
  */
-export async function findUserByAuth0Id(payload: Payload, auth0Id: string) {
+export async function findUserByGoogleId(payload: Payload, googleId: string) {
   const findUser = () =>
     payload.find({
       collection: 'users',
-      where: { auth0Id: { equals: auth0Id } },
+      where: { googleId: { equals: googleId } },
       limit: 1,
     });
 
@@ -71,29 +77,29 @@ export async function findUserByAuth0Id(payload: Payload, auth0Id: string) {
 }
 
 /**
- * Finds or provisions the Payload `users` record backing an Auth0 identity,
+ * Finds or provisions the Payload `users` record backing a Google identity,
  * applying the GEORIDE_EMAIL/GEORIDE_PASSWORD env override when present.
  */
-export async function getOrCreateUser(payload: Payload, auth0Id: string, auth0Email?: string) {
-  const userResult = await findUserByAuth0Id(payload, auth0Id);
+export async function getOrCreateUser(payload: Payload, googleId: string, googleEmail?: string) {
+  const userResult = await findUserByGoogleId(payload, googleId);
   let user = userResult.docs[0];
 
   const envEmail = process.env.GEORIDE_EMAIL;
   const envPassword = process.env.GEORIDE_PASSWORD;
 
   if (!user) {
-    const sanitizedAuth0Id = auth0Id.replace(/[^a-zA-Z0-9]/g, '_');
-    const userEmail = auth0Email || `motard_${sanitizedAuth0Id}@example.com`;
+    const sanitizedGoogleId = googleId.replace(/[^a-zA-Z0-9]/g, '_');
+    const userEmail = googleEmail || `motard_${sanitizedGoogleId}@example.com`;
 
     user = await payload.create({
       collection: 'users',
       data: {
         email: userEmail,
         // Payload requires a password field for auth-enabled collections,
-        // but this account is never logged into directly (Auth0 handles
-        // authentication) — so it must be a random, unguessable value.
+        // but this account is never logged into directly (Google OIDC
+        // handles authentication) — so it must be a random, unguessable value.
         password: generateRandomPassword(),
-        auth0Id,
+        googleId,
         geoRideEmail: envEmail || userEmail,
         geoRidePassword: envPassword,
         trackingStartDate: process.env.GEORIDE_START_DATE

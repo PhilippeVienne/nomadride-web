@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getPayload } from 'payload';
 import config from '../../../../payload.config';
 import { decrypt, getPayloadSecret } from '../../../utils/crypto';
-import { getOrCreateUser, resolveAuth0Session } from '../../../lib/getSessionUser';
+import { getOrCreateUser, resolveGoogleSession } from '../../../lib/getSessionUser';
 
 // A set of pre-defined realistic routes in France for the mock generator
 const MOCK_ROUTES = [
@@ -65,11 +65,11 @@ export async function POST(request: NextRequest) {
         send({ step: 'init', message: 'Initialisation de la synchronisation...' });
         const payloadInstance = await getPayload({ config });
 
-        // 1. Get user session (Auth0 v4, with local-dev fallback)
-        const { auth0Id, auth0Email } = await resolveAuth0Session(request);
+        // 1. Get user session (Google OIDC, with local-dev fallback)
+        const { googleId, googleEmail } = await resolveGoogleSession(request);
 
         // 2. Fetch or create the local user record in Payload
-        const user = await getOrCreateUser(payloadInstance, auth0Id, auth0Email);
+        const user = await getOrCreateUser(payloadInstance, googleId, googleEmail);
 
         // 3. Compute sync period
         const now = new Date();
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
         if (isMock) {
           send({ step: 'mock', message: 'Génération de trajets simulés (mode Démo)...' });
-          console.log(`[GeoRide Sync] Running in MOCK mode for user ${auth0Id}`);
+          console.log(`[GeoRide Sync] Running in MOCK mode for user ${googleId}`);
           
           // Calculate how many trips to mock based on how much time has passed
           const timeDiff = now.getTime() - startDate.getTime();

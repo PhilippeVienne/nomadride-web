@@ -20,7 +20,7 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
-      name: 'auth0Id',
+      name: 'googleId',
       type: 'text',
       required: true,
       unique: true,

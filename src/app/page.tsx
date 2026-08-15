@@ -2,12 +2,12 @@ import { getPayload } from 'payload';
 import { redirect } from 'next/navigation';
 import config from '../../payload.config';
 import DashboardClient from '@/components/DashboardClient';
-import { getOrCreateUser, resolveAuth0Session } from '@/lib/getSessionUser';
+import { getOrCreateUser, resolveGoogleSession } from '@/lib/getSessionUser';
 
 export const revalidate = 0; // Disable server caching to ensure page updates when data is synced
 
 export default async function Page() {
-  const { auth0Id, auth0Email, isAuthenticated } = await resolveAuth0Session();
+  const { googleId, googleEmail, isAuthenticated } = await resolveGoogleSession();
 
   // Guests only get the Pit-Stop demo; trip history requires a GeoRide account.
   // `from=home` lets the Pit-Stop page explain *why* the URL changed instead
@@ -21,7 +21,7 @@ export default async function Page() {
     id: '0',
     geoRideEmail: undefined as string | undefined,
     lastSyncDate: undefined as string | undefined,
-    auth0Id,
+    googleId,
     isAuthenticated,
     selectedFuel: 'sp95' as const,
     searchRadius: 20,
@@ -37,7 +37,7 @@ export default async function Page() {
     const payload = await getPayload({ config });
 
     // 1. Fetch or provision the user record from Payload database (auto-heals schema if missing)
-    const user = await getOrCreateUser(payload, auth0Id, auth0Email);
+    const user = await getOrCreateUser(payload, googleId, googleEmail);
 
     // 2. Fetch trips cached for this user
     const tripsResult = await payload.find({
@@ -66,7 +66,7 @@ export default async function Page() {
       id: String(user.id),
       geoRideEmail: user.geoRideEmail || undefined,
       lastSyncDate: user.lastSyncDate || undefined,
-      auth0Id: user.auth0Id || auth0Id,
+      googleId: user.googleId || googleId,
       isAuthenticated,
       selectedFuel: (user.selectedFuel || 'sp95') as any,
       searchRadius: user.searchRadius || 20,

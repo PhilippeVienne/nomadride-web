@@ -129,7 +129,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  auth0Id: string;
+  googleId: string;
   geoRideEmail?: string | null;
   geoRidePassword?: string | null;
   lastSyncDate?: string | null;
@@ -354,7 +354,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
-  auth0Id?: T;
+  googleId?: T;
   geoRideEmail?: T;
   geoRidePassword?: T;
   lastSyncDate?: T;

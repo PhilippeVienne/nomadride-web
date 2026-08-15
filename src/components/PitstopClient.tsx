@@ -57,7 +57,7 @@ interface User {
   id: string;
   geoRideEmail?: string;
   lastSyncDate?: string;
-  auth0Id?: string;
+  googleId?: string;
   isAuthenticated?: boolean;
   selectedFuel?: FuelType;
   searchRadius?: number;
@@ -245,8 +245,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           lastSearchLng: searchCenter ? searchCenter[1] : null,
         };
 
-        const userIdParam = user.auth0Id ? `?userId=${encodeURIComponent(user.auth0Id)}` : '';
-        await fetch(`/api/user/preferences${userIdParam}`, {
+        await fetch(`/api/user/preferences`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -257,7 +256,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
     }, 1000);
 
     return () => clearTimeout(delayTimer);
-  }, [selectedFuel, radius, fillSize, consumption, excludeDistance, searchQuery, searchCenter, user.auth0Id]);
+  }, [selectedFuel, radius, fillSize, consumption, excludeDistance, searchQuery, searchCenter, user.googleId]);
 
   const handleSelectAutocomplete = (item: { name: string; lat: number; lon: number }) => {
     lastSelectedQueryRef.current = item.name;
@@ -327,7 +326,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
           <div className="auth-status-container">
             {user.isAuthenticated ? (
               <>
-                <span className="auth-badge authenticated">Auth0 Connecté</span>
+                <span className="auth-badge authenticated">Google Connecté</span>
                 <span style={{ color: 'var(--color-text-muted)' }}>|</span>
                 <a href="/auth/logout" className="btn-auth btn-auth-logout">Se déconnecter</a>
               </>
@@ -335,7 +334,7 @@ export default function PitstopClient({ trips, user }: PitstopClientProps) {
               <>
                 <span className="auth-badge guest">Mode Invité</span>
                 <span style={{ color: 'var(--color-text-muted)' }}>|</span>
-                <a href="/auth/login" className="btn-auth btn-auth-login">Se connecter avec Auth0</a>
+                <a href="/auth/login" className="btn-auth btn-auth-login">Se connecter avec Google</a>
               </>
             )}
             <span style={{ color: 'var(--color-text-muted)' }}>|</span>
