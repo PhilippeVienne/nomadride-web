@@ -240,7 +240,7 @@ export async function ensurePayloadSchema(payload: any) {
     return;
   }
 
-  console.log('[Schema Auto-Init] Verifying and repairing PostgreSQL schema in Supabase...');
+  console.log('[Schema Auto-Init] Verifying and repairing PostgreSQL schema...');
 
   let succeeded = 0;
   let skipped = 0;

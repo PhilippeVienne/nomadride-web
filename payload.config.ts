@@ -16,23 +16,12 @@ import { ensurePayloadSchema } from './src/lib/ensureSchema';
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
-const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const isProd = process.env.NODE_ENV === 'production';
 
 const getDbConnectionString = () => {
-  const source = process.env.POSTGRES_URL_NON_POOLING
-    ? 'POSTGRES_URL_NON_POOLING'
-    : process.env.POSTGRES_URL
-    ? 'POSTGRES_URL'
-    : process.env.DATABASE_URI
-    ? 'DATABASE_URI'
-    : 'LOCAL_FALLBACK';
-
-  let connStr = (
-    process.env.POSTGRES_URL_NON_POOLING ||
-    process.env.POSTGRES_URL ||
+  let connStr =
     process.env.DATABASE_URI ||
-    'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker'
-  );
+    'postgres://payload:pl_password_local_95@localhost:5432/georide_tracker';
 
   // Strip sslmode query parameter so pg-connection-string parser doesn't override pool SSL settings
   const hadSslMode = connStr.includes('sslmode=');
@@ -42,20 +31,15 @@ const getDbConnectionString = () => {
 
   // Mask password for safe logging
   const maskedStr = connStr.replace(/(:[^:@]+@)/, ':****@');
-  console.log(`[Payload DB Config] Source: ${source} | Had sslmode: ${hadSslMode} | ConnectionString: ${maskedStr}`);
+  console.log(`[Payload DB Config] Had sslmode: ${hadSslMode} | ConnectionString: ${maskedStr}`);
 
   return connStr;
-};
-
-const getSslCa = () => {
-  if (!process.env.POSTGRES_CA) return undefined;
-  return process.env.POSTGRES_CA.replace(/\\n/g, '\n');
 };
 
 // `isProd` alone isn't a reliable signal for whether SSL is needed: it was a
 // safe default when production always meant Supabase over the public
 // internet (SSL required), but a self-hosted Postgres reachable only over
-// the deployment platform's internal Docker network (e.g. Coolify) usually
+// the deployment platform's internal Docker network (Coolify) usually
 // has no SSL listener at all, and forcing it makes the pg driver throw
 // "The server does not support SSL connections". DATABASE_SSL lets the
 // deployment be explicit; absent, it falls back to the old isProd behavior.
@@ -65,8 +49,7 @@ const shouldUseSsl = () => {
   return isProd;
 };
 
-const hasCa = !!process.env.POSTGRES_CA;
-console.log(`[Payload DB SSL Config] isProd: ${isProd} | useSsl: ${shouldUseSsl()} | hasPostgresCa: ${hasCa}`);
+console.log(`[Payload DB SSL Config] isProd: ${isProd} | useSsl: ${shouldUseSsl()}`);
 
 export default buildConfig({
   admin: {
@@ -86,12 +69,7 @@ export default buildConfig({
     pool: {
       connectionString: getDbConnectionString(),
       connectionTimeoutMillis: 10000,
-      ssl: shouldUseSsl()
-        ? {
-            rejectUnauthorized: false,
-            ...(getSslCa() ? { ca: getSslCa() } : {}),
-          }
-        : false,
+      ssl: shouldUseSsl() ? { rejectUnauthorized: false } : false,
     },
     push: true,
     tablesFilter: [
