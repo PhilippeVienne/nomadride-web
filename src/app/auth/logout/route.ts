@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE_NAME } from '@/lib/googleAuth';
+import { NextResponse } from 'next/server';
+import { getAppBaseUrl, SESSION_COOKIE_NAME } from '@/lib/googleAuth';
 
-export async function GET(request: NextRequest) {
-  const response = NextResponse.redirect(new URL('/', request.url));
+export async function GET() {
+  const response = NextResponse.redirect(new URL('/', getAppBaseUrl()));
   response.cookies.delete(SESSION_COOKIE_NAME);
   return response;
 }
