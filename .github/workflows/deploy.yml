@@ -34,7 +34,7 @@ jobs:
       - name: Trigger deployment
         id: trigger
         run: |
-          uuid=$(coolify deploy name nomadride-web --format json | jq -r '.[0].deployment_uuid')
+          uuid=$(coolify deploy name nomadride-web --format json | jq -r '.deployments[0].deployment_uuid')
           if [ -z "$uuid" ] || [ "$uuid" = "null" ]; then
             echo "::error::Impossible de récupérer le deployment_uuid renvoyé par Coolify."
             exit 1
