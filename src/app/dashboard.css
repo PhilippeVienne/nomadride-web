@@ -225,6 +225,49 @@
   flex: 1;
 }
 
+.trips-month-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trips-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-sidebar, var(--color-bg-card));
+  z-index: 1;
+}
+
+.trips-month-header:hover {
+  color: var(--color-text-primary);
+}
+
+.trips-month-header-count {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text-muted);
+}
+
+.trips-month-header-chevron {
+  transition: transform 0.2s ease;
+}
+
+.trips-month-header-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
 .trip-item-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -355,6 +398,34 @@
 .trip-detail-panel-close:hover {
   color: var(--color-text-primary);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.trip-detail-panel-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.trip-detail-panel-nav-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: var(--radius-sm);
+}
+
+.trip-detail-panel-nav-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.trip-detail-panel-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .trip-detail-panel-date {
