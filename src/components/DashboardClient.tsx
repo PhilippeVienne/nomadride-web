@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,6 +12,9 @@ import {
   AlertCircle,
   Menu,
   X,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import '../app/dashboard.css';
 import { FuelType } from '../lib/pitstop/types';
@@ -101,11 +104,40 @@ function getTripStats(trip: Trip) {
   };
 }
 
+/** Groups trips (already sorted newest-first) into "Mois Année" buckets, preserving order. */
+function groupTripsByMonth(trips: Trip[]) {
+  const groups: { key: string; label: string; trips: Trip[] }[] = [];
+  const indexByKey: Record<string, number> = {};
+
+  for (const trip of trips) {
+    const date = new Date(trip.startedAt);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    let idx = indexByKey[key];
+    if (idx === undefined) {
+      const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      idx = groups.length;
+      groups.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1), trips: [] });
+      indexByKey[key] = idx;
+    }
+    groups[idx].trips.push(trip);
+  }
+
+  return groups;
+}
+
 export default function DashboardClient({ initialTrips, user }: DashboardClientProps) {
   const router = useRouter();
 
   // State
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // activeTripId is mirrored into the URL (?trip=<id>) via history.pushState
+  // rather than router.push/replace: page.tsx doesn't read searchParams, so a
+  // Next.js navigation would trigger a pointless server round-trip (and a
+  // fresh Postgres query) just to select a trip on the map. Plain History API
+  // gives shareable deep links and working back/forward without that cost.
+  const [activeTripId, setActiveTripId] = useState<string | null>(
+    () => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('trip') : null),
+  );
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -113,8 +145,18 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
   const [fitAllTripsTrigger, setFitAllTripsTrigger] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Keep activeTripId in sync with browser back/forward navigation.
+  useEffect(() => {
+    const onPopState = () => setActiveTripId(new URLSearchParams(window.location.search).get('trip'));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   // Filter out doubtful/fallback trips (path length <= 2)
-  const trips = initialTrips.filter(t => t.path && t.path.length > 2);
+  const trips = useMemo(
+    () => initialTrips.filter(t => t.path && t.path.length > 2),
+    [initialTrips],
+  );
 
   const isDefaultLocalEmail = !user.geoRideEmail || user.geoRideEmail.startsWith('motard_') || user.geoRideEmail === 'motard@example.com';
 
@@ -129,8 +171,54 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
 
   // Selected trip's detail panel — clicking a trip both zooms the map to it
   // (existing behavior) and now also surfaces its stats here.
-  const activeTrip = trips.find((t) => t.id === activeTripId) || null;
+  const activeTripIndex = trips.findIndex((t) => t.id === activeTripId);
+  const activeTrip = activeTripIndex >= 0 ? trips[activeTripIndex] : null;
   const activeTripStats = activeTrip ? getTripStats(activeTrip) : null;
+
+  const tripGroups = useMemo(() => groupTripsByMonth(trips), [trips]);
+
+  const monthKeyOf = (trip: Trip) => {
+    const date = new Date(trip.startedAt);
+    return `${date.getFullYear()}-${date.getMonth()}`;
+  };
+
+  // Selects a trip (or clears the selection), mirrors it into the URL as
+  // ?trip=<id> for shareable deep links, and makes sure its month group
+  // isn't hidden behind a collapsed header.
+  const selectTrip = (tripId: string | null) => {
+    setActiveTripId(tripId);
+    const url = tripId ? `?trip=${tripId}` : window.location.pathname;
+    window.history.pushState(null, '', url);
+
+    if (tripId) {
+      const trip = trips.find((t) => t.id === tripId);
+      if (trip) {
+        const key = monthKeyOf(trip);
+        setCollapsedMonths((prev) => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    }
+  };
+
+  const toggleMonthCollapsed = (key: string) => {
+    setCollapsedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const goToAdjacentTrip = (direction: -1 | 1) => {
+    if (activeTripIndex < 0 || trips.length === 0) return;
+    const nextIndex = activeTripIndex + direction;
+    if (nextIndex < 0 || nextIndex >= trips.length) return;
+    selectTrip(trips[nextIndex].id);
+  };
 
   // Trigger sync via API Route
   const handleSync = async () => {
@@ -391,24 +479,48 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
                   <span>Aucun trajet synchronisé. Cliquez sur &quot;Synchroniser&quot; ci-dessus pour charger l&apos;historique GeoRide.</span>
                 </div>
               ) : (
-                trips.map(trip => {
-                  const isActive = activeTripId === trip.id;
-                  const tripDate = new Date(trip.startedAt).toLocaleDateString('fr-FR');
+                tripGroups.map((group) => {
+                  const isCollapsed = collapsedMonths.has(group.key);
 
                   return (
-                    <div
-                      key={trip.id}
-                      className={`trip-item-card ${isActive ? 'active' : ''}`}
-                      onClick={() => setActiveTripId(isActive ? null : trip.id)}
-                    >
-                      <div className="trip-item-header">
-                        <span className="trip-item-title">{trip.title || 'Trajet Moto'}</span>
-                        <span className="trip-item-date">{tripDate}</span>
+                    <div key={group.key} className="trips-month-group">
+                      <div
+                        className="trips-month-header"
+                        onClick={() => toggleMonthCollapsed(group.key)}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <span>
+                          {group.label}{' '}
+                          <span className="trips-month-header-count">({group.trips.length})</span>
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`trips-month-header-chevron ${isCollapsed ? 'collapsed' : ''}`}
+                        />
                       </div>
-                      <div className="trip-item-stats">
-                        <span className="trip-stat-pill">🏁 {trip.distance || 0} km</span>
-                        <span className="trip-stat-pill">⏱️ {trip.duration || 0} min</span>
-                      </div>
+
+                      {!isCollapsed && group.trips.map(trip => {
+                        const isActive = activeTripId === trip.id;
+                        const tripDate = new Date(trip.startedAt).toLocaleDateString('fr-FR');
+
+                        return (
+                          <div
+                            key={trip.id}
+                            className={`trip-item-card ${isActive ? 'active' : ''}`}
+                            onClick={() => selectTrip(isActive ? null : trip.id)}
+                          >
+                            <div className="trip-item-header">
+                              <span className="trip-item-title">{trip.title || 'Trajet Moto'}</span>
+                              <span className="trip-item-date">{tripDate}</span>
+                            </div>
+                            <div className="trip-item-stats">
+                              <span className="trip-stat-pill">🏁 {trip.distance || 0} km</span>
+                              <span className="trip-stat-pill">⏱️ {trip.duration || 0} min</span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })
@@ -443,14 +555,36 @@ export default function DashboardClient({ initialTrips, user }: DashboardClientP
             <div className="trip-detail-panel">
               <div className="trip-detail-panel-header">
                 <span className="trip-detail-panel-title">{activeTrip.title || 'Trajet Moto'}</span>
-                <button
-                  type="button"
-                  className="trip-detail-panel-close"
-                  onClick={() => setActiveTripId(null)}
-                  aria-label="Fermer le détail du trajet"
-                >
-                  <X size={14} />
-                </button>
+                <div className="trip-detail-panel-nav">
+                  <button
+                    type="button"
+                    className="trip-detail-panel-nav-btn"
+                    onClick={() => goToAdjacentTrip(-1)}
+                    disabled={activeTripIndex <= 0}
+                    aria-label="Trajet précédent (plus récent)"
+                    title="Trajet précédent"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="trip-detail-panel-nav-btn"
+                    onClick={() => goToAdjacentTrip(1)}
+                    disabled={activeTripIndex < 0 || activeTripIndex >= trips.length - 1}
+                    aria-label="Trajet suivant (plus ancien)"
+                    title="Trajet suivant"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="trip-detail-panel-close"
+                    onClick={() => selectTrip(null)}
+                    aria-label="Fermer le détail du trajet"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
               <div className="trip-detail-panel-date">
                 {activeTripStats.dateLabel} · {activeTripStats.startLabel} → {activeTripStats.endLabel}
