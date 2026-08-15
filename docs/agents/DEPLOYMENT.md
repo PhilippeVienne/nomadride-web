@@ -39,10 +39,15 @@ Les commandes qui modifient l'environnement de prod (création/màj de variables
 - `APP_BASE_URL` — origine publique de cet environnement (ex: `https://ride.vienne.me`), utilisée pour construire le `redirect_uri` OIDC Google. Source de vérité unique, pas de dérivation dynamique par preview.
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — credentials OAuth créés dans Google Cloud Console (authentification, voir `src/lib/googleAuth.ts`).
 - `SESSION_SECRET` — secret de signature des JWT de session applicative (HS256). Une valeur dédiée par environnement, jamais réutilisée entre environnements.
-- `DATABASE_URI`, `DATABASE_SSL` — connexion Postgres (Supabase).
+- `DATABASE_URI`, `DATABASE_SSL` — connexion Postgres. Base self-hosted sur Coolify (service `nomadride-postgis`, réseau interne Docker, pas de SSL) — pas Supabase, cf. [[project_google_oauth_coolify]].
 - `PAYLOAD_SECRET` — secret interne PayloadCMS.
 - `MOCK_GEORIDE` — active un mock GeoRide en dev/preview si nécessaire.
 
-Les anciennes variables `AUTH0_*` sont obsolètes depuis le passage à l'auth Google OIDC native et peuvent être supprimées de Coolify.
+Les anciennes variables `AUTH0_*` et les variables Postgres/Supabase de l'ère Vercel (`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_CA`, `NEXT_PUBLIC_SUPABASE_*`, etc.) sont obsolètes et ont été retirées du code comme de Coolify.
+
+## Tâches planifiées
+
+- `prewarm-pitstops` (`/api/cron/prewarm-pitstops`, quotidien) : préchauffe le cache OSM/Overpass pour les zones les plus demandées. Anciennement déclenché par Vercel Cron (`vercel.json`, supprimé) — à recréer via `coolify app task create` sur Coolify (`coolify app task --help`).
+- `keep-alive` : supprimé — c'était un ping anti-veille pour Supabase, inutile avec un Postgres self-hosted qui ne se met jamais en veille.
 
 Pour configurer un nouvel environnement, voir aussi Google Cloud Console : la redirect URI `<APP_BASE_URL>/auth/callback` doit être enregistrée pour chaque domaine (prod, preview, localhost en dev).

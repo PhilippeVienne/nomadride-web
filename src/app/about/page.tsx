@@ -9,9 +9,6 @@ export const metadata = {
 
 export default function AboutPage() {
   const appVersion = pkg.version;
-  const commitSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
-  const commitRef = process.env.VERCEL_GIT_COMMIT_REF;
-  const vercelEnv = process.env.VERCEL_ENV;
 
   return (
     <div className="dashboard-container">
@@ -66,8 +63,7 @@ export default function AboutPage() {
                 Contact : <a href="mailto:philippegeek@gmail.com" style={{ color: 'var(--accent-cyan)' }}>philippegeek@gmail.com</a>
               </p>
               <p className="settings-card-desc">
-                Hébergement applicatif : Vercel Inc. (<a href="https://vercel.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)' }}>vercel.com</a>).
-                Base de données : Supabase (PostgreSQL).
+                Hébergement applicatif et base de données (PostgreSQL) : infrastructure privée, gérée par Philippe Vienne.
               </p>
             </div>
 
@@ -85,9 +81,9 @@ export default function AboutPage() {
                 stations-service les moins chères sur votre itinéraire.
               </p>
               <p className="settings-card-desc">
-                Sous-traitants : Google (authentification), Supabase (hébergement base de données), Vercel
-                (hébergement applicatif), et GeoRide (source des données de trajets — un compte tiers dont vous
-                fournissez vous-même les identifiants).
+                Sous-traitants : Google (authentification) et GeoRide (source des données de trajets — un compte
+                tiers dont vous fournissez vous-même les identifiants). L&apos;hébergement applicatif et la base de
+                données ne dépendent d&apos;aucun sous-traitant tiers.
               </p>
               <p className="settings-card-desc">
                 Cookies : uniquement le cookie de session nécessaire à l&apos;authentification. Aucun cookie
@@ -109,8 +105,6 @@ export default function AboutPage() {
                 <Info size={18} style={{ color: 'var(--accent-cyan)' }} /> Version de l&apos;application
               </h3>
               <p className="settings-card-desc">Version : {appVersion}</p>
-              {commitSha && <p className="settings-card-desc">Commit : {commitSha}{commitRef ? ` (${commitRef})` : ''}</p>}
-              {vercelEnv && <p className="settings-card-desc">Environnement : {vercelEnv}</p>}
             </div>
           </div>
         </div>
