@@ -1,0 +1,68 @@
+name: Deploy to Coolify
+
+# Coolify (asgard) n'est joignable que via Tailscale, pas depuis l'internet
+# public — voir docs/agents/DEPLOYMENT.md. Ce workflow rejoint le tailnet le
+# temps du job (clé éphémère taguée tag:ci, cf. yggdrasil/terraform/modules/
+# tailscale-ci-key) pour déclencher le déploiement et en suivre les logs.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          tags: tag:ci
+
+      - name: Install Coolify CLI
+        run: curl -fsSL https://raw.githubusercontent.com/coollabsio/coolify-cli/main/scripts/install.sh | bash
+
+      - name: Configure Coolify context
+        run: coolify context add ci "${{ secrets.COOLIFY_URL }}" "${{ secrets.COOLIFY_API_TOKEN }}" --default --force
+
+      - name: Trigger deployment
+        id: trigger
+        run: |
+          uuid=$(coolify deploy name nomadride-web --format json | jq -r '.[0].deployment_uuid')
+          if [ -z "$uuid" ] || [ "$uuid" = "null" ]; then
+            echo "::error::Impossible de récupérer le deployment_uuid renvoyé par Coolify."
+            exit 1
+          fi
+          echo "uuid=$uuid" >> "$GITHUB_OUTPUT"
+          echo "Déploiement déclenché : $uuid"
+
+      - name: Wait for deployment and stream logs
+        env:
+          APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+          DEPLOY_UUID: ${{ steps.trigger.outputs.uuid }}
+        run: |
+          status="in_progress"
+          for _ in $(seq 1 90); do
+            status=$(coolify app deployments list "$APP_UUID" --format json \
+              | jq -r --arg uuid "$DEPLOY_UUID" '.[] | select(.deployment_uuid == $uuid) | .status')
+            echo "Statut : $status"
+            if [ "$status" = "finished" ] || [ "$status" = "failed" ]; then
+              break
+            fi
+            sleep 10
+          done
+
+          echo "::group::Logs de déploiement"
+          coolify app deployments logs "$APP_UUID" "$DEPLOY_UUID" || true
+          echo "::endgroup::"
+
+          if [ "$status" != "finished" ]; then
+            echo "::error::Déploiement Coolify terminé avec le statut '$status'."
+            exit 1
+          fi
