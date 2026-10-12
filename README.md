@@ -29,4 +29,4 @@ To learn more about Next.js, take a look at the following resources:
 
 ## Deployment
 
-This app is deployed on Coolify (self-hosted), not Vercel. See [docs/agents/DEPLOYMENT.md](docs/agents/DEPLOYMENT.md).
+This app is deployed on AWS (Lambda, CloudFront, Aurora PostgreSQL serverless), not Vercel. See [docs/agents/DEPLOYMENT.md](docs/agents/DEPLOYMENT.md).

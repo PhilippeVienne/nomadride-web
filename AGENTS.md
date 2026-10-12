@@ -6,4 +6,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Déploiement
 
-L'app tourne sur **Coolify** (self-hosted), pas sur Vercel. Voir [docs/agents/DEPLOYMENT.md](docs/agents/DEPLOYMENT.md) pour l'app Coolify, la CLI, et les variables d'environnement requises.
+L'app tourne sur **AWS** (Lambda + CloudFront + Aurora PostgreSQL serverless, profil `bike360`), pas sur Coolify ni sur Vercel. Voir [docs/agents/DEPLOYMENT.md](docs/agents/DEPLOYMENT.md) pour l'architecture, le script de déploiement, les secrets et la base.
