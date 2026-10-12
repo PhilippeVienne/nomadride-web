@@ -15,7 +15,7 @@ function delay(ms: number) {
 }
 
 /**
- * Daily cron (see vercel.json, 07:00 UTC ≈ 08:00 Europe/Paris in winter) that
+ * Daily cron (EventBridge Scheduler, see infra/aws/cron.tf, 07:00 UTC ≈ 08:00 Europe/Paris in winter) that
  * proactively refreshes the OSM/Overpass cache for the zones users actually
  * search most often. Because it runs once a day for a bounded, popularity-
  * ranked set of zones — instead of on every user request — this is what
@@ -36,6 +36,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  return prewarm();
+}
+
+async function prewarm() {
   const zones = await getTopPopularZones(MAX_ZONES_PER_RUN);
 
   let refreshed = 0;
@@ -62,4 +66,18 @@ export async function GET(req: NextRequest) {
     failed,
     timestamp: new Date().toISOString(),
   });
+}
+
+/**
+ * Entry point for the scheduled Lambda function: the Lambda Web Adapter
+ * forwards the EventBridge Scheduler event as a POST to this route (see
+ * AWS_LWA_PASS_THROUGH_PATH in infra/aws/cron.tf). That function has no
+ * public address, so no shared secret travels with the event; the public
+ * function never sets CRON_PASS_THROUGH and answers 404 here.
+ */
+export async function POST() {
+  if (process.env.CRON_PASS_THROUGH !== 'true') {
+    return NextResponse.json({ status: 'error', message: 'Not found' }, { status: 404 });
+  }
+  return prewarm();
 }

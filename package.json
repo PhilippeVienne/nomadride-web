@@ -10,9 +10,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "^3.1149.0",
+    "@aws-sdk/rds-signer": "^3.1149.0",
     "@payloadcms/db-postgres": "^3.85.1",
     "@payloadcms/next": "^3.85.1",
     "@payloadcms/richtext-lexical": "^3.85.1",
+    "drizzle-kit": "^0.31.7",
     "jose": "^6.2.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.18.0",
@@ -22,8 +25,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
-    "sharp": "^0.35.2",
-    "drizzle-kit": "^0.31.7"
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -4,6 +4,7 @@ import path from 'path';
 import { buildConfig } from 'payload';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
+import { Signer } from '@aws-sdk/rds-signer';
 
 import { getPayloadSecret } from './src/utils/crypto';
 import { Users } from './src/collections/Users';
@@ -51,6 +52,41 @@ const shouldUseSsl = () => {
 
 console.log(`[Payload DB SSL Config] isProd: ${isProd} | useSsl: ${shouldUseSsl()}`);
 
+// Aurora PostgreSQL created with "express configuration" (the AWS deployment,
+// see infra/aws) has no password at all: its internet access gateway only
+// accepts short-lived IAM tokens (15 min). pg calls `password` again for
+// every new connection, so the pool never holds an expired token. The
+// discrete host/user fields are required here — when a connectionString is
+// given, pg takes the password from it and ignores the function.
+const getDbPoolConfig = () => {
+  const connectionString = getDbConnectionString();
+  if (process.env.DATABASE_IAM_AUTH !== 'true') {
+    return {
+      connectionString,
+      connectionTimeoutMillis: 10000,
+      ssl: shouldUseSsl() ? { rejectUnauthorized: false } : false,
+    };
+  }
+
+  const url = new URL(connectionString);
+  const host = url.hostname;
+  const port = Number(url.port || 5432);
+  const user = decodeURIComponent(url.username);
+  const signer = new Signer({ hostname: host, port, username: user });
+
+  return {
+    host,
+    port,
+    user,
+    database: url.pathname.replace(/^\//, ''),
+    password: () => signer.getAuthToken(),
+    // An auto-paused cluster takes several seconds to resume on the first
+    // connection after an idle period; 10s is not always enough.
+    connectionTimeoutMillis: 30000,
+    ssl: { rejectUnauthorized: true },
+  };
+};
+
 export default buildConfig({
   admin: {
     user: 'users',
@@ -66,11 +102,7 @@ export default buildConfig({
   editor: lexicalEditor({}),
   secret: getPayloadSecret(),
   db: postgresAdapter({
-    pool: {
-      connectionString: getDbConnectionString(),
-      connectionTimeoutMillis: 10000,
-      ssl: shouldUseSsl() ? { rejectUnauthorized: false } : false,
-    },
+    pool: getDbPoolConfig(),
     push: true,
     tablesFilter: [
       '!spatial_ref_sys',

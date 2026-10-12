@@ -1,0 +1,10 @@
+.git
+.github
+.next
+.vercel
+.env*
+node_modules
+infra
+docs
+*.tsbuildinfo
+.auth0-mcp-*
